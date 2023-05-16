@@ -1,6 +1,6 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 # Leviton Decora Smart Wi-Fi Home Assistant Integration
-Custom component to allow control of Leviton Decora Smart Wi-Fi devices in [Home Assistant](https://home-assistant.io).
+Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https://www.leviton.com/en/products/brands/decora-smart) in [Home Assistant](https://home-assistant.io).
 
 ## Credit
 - This is an complete rewrite of the existing Home Assistant core integration with support for additional devices.
