@@ -1,0 +1,6 @@
+{
+	"name": "leviton_decora_smart_wifi",
+	"content_in_root": false,
+	"iot_class": "Cloud Polling",
+	"render_readme": true
+}

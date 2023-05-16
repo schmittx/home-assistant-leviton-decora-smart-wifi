@@ -1,0 +1,127 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "The desired account is already configured"
+        },
+        "error": {
+            "invalid_login": "Invalid login",
+            "update_failed": "Update failed"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "email": "Email",
+                    "password": "Password"
+                },
+                "description": "Enter the email address and password associated with your account.",
+                "title": "Login to My Leviton account"
+            },
+            "residences": {
+                "data": {
+                    "residences": "Residences"
+                },
+                "description": "Select the desired residence(s) to configure.",
+                "title": "Select residence(s)"
+            },
+            "devices": {
+                "data": {
+                    "devices": "Devices"
+                },
+                "description": "Residence: {residence_name}\n\nA new device entry and all applicable entities will be created within Home Assistant for each selected device. Individual entities can then be disabled as desired.",
+                "title": "Select device(s) within the residence"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "residences": {
+                "data": {
+                    "residences": "Residences"
+                },
+                "description": "Select the desired Leviton residence(s) to configure.",
+                "title": "Select residence(s)"
+            },
+            "devices": {
+                "data": {
+                    "devices": "Devices"
+                },
+                "description": "Residence: {residence_name}\n\nA new device entry and all applicable entities will be created within Home Assistant for each selected device. Individual entities can then be disabled as desired.\n\nDeselecting a device will delete that device entry and all associated entities.",
+                "title": "Select device(s) within the residence"
+            },
+            "advanced": {
+                "data": {
+                    "save_responses": "Save server responses to custom_components/leviton_decora_smart_wifi/api/responses",
+                    "scan_interval": "Polling interval (seconds)",
+                    "timeout": "Polling timeout (seconds)"
+                },
+                "description": "Server responses can be saved to a file for debugging and development support.\n\nPolling interval and timeout can be adjusted if errors are encountered.",
+                "title": "Advanced options"
+            }
+        }
+    },
+    "entity": {
+        "select": {
+            "all": {
+                "state": {
+                    "0_seconds": "0 seconds",
+                    "0_5_seconds": "0.5 seconds",
+                    "10_hours": "10 hours",
+                    "10_minutes": "10 minutes",
+                    "10_seconds": "10 seconds",
+                    "11_hours": "11 hours",
+                    "12_hours": "12 hours",
+                    "15_minutes": "15 minutes",
+                    "15_seconds": "15 seconds",
+                    "1_hour": "1 hour",
+                    "1_minute": "1 minute",
+                    "1_second": "1 second",
+                    "1_5_seconds": "1.5 seconds",
+                    "20_minutes": "20 minutes",
+                    "25_minutes": "25 minutes",
+                    "25_seconds": "25 seconds",
+                    "2_hours": "2 hours",
+                    "2_minutes": "2 minutes",
+                    "2_seconds": "2 seconds",
+                    "30_minutes": "30 minutes",
+                    "3_hours": "3 hours",
+                    "3_minutes": "3 minutes",
+                    "3_seconds": "3 seconds",
+                    "4_hours": "4 hours",
+                    "4_minutes": "4 minutes",
+                    "45_minutes": "45 minutes",
+                    "5_hours": "5 hours",
+                    "5_minutes": "5 minutes",
+                    "5_seconds": "5 seconds",
+                    "6_hours": "6 hours",
+                    "6_minutes": "6 minutes",
+                    "60_minutes": "60 minutes",
+                    "7_hours": "7 hours",
+                    "7_minutes": "7 minutes",
+                    "8_hours": "8 hours",
+                    "8_minutes": "8 minutes",
+                    "9_hours": "9 hours",
+                    "9_minutes": "9 minutes",
+                    "always_off": "Always Off",
+                    "always_on": "Always On",
+                    "cfl": "CFL",
+                    "disabled": "Disabled",
+                    "extended": "Extended",
+                    "guidelight": "Guidelight",
+                    "incandescent": "Incandescent",
+                    "led": "LED",
+                    "led_always_off": "Off",
+                    "locator_mode": "Locator Mode",
+                    "medium": "Medium",
+                    "mlv": "MLV",
+                    "non_dimmable": "Non-Dimmable",
+                    "normal": "Normal",
+                    "occupancy": "Occupancy",
+                    "room_lights": "Room Lights",
+                    "status_mode": "Status Mode",
+                    "unknown": "Unknown",
+                    "vacancy": "Vacancy"
+                }
+            }
+        }
+    }
+}
