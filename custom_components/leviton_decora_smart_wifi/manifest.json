@@ -1,8 +1,8 @@
 {
   "domain": "leviton_decora_smart_wifi",
   "name": "Leviton Decora Smart Wi-Fi",
-  "documentation": "https://github.com/schmittx/home-assistant-leviton_decora_smart_wifi",
-  "issue_tracker": "https://github.com/schmittx/home-assistant-leviton_decora_smart_wifi/issues",
+  "documentation": "https://github.com/schmittx/home-assistant-leviton-decora-smart-wifi",
+  "issue_tracker": "https://github.com/schmittx/home-assistant-leviton-decora-smart-wifi/issues",
   "dependencies": [],
   "after_dependencies": [],
   "codeowners": ["@schmittx"],
@@ -10,5 +10,5 @@
   "config_flow": true,
   "quality_scale": "gold",
   "iot_class": "cloud_polling",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
