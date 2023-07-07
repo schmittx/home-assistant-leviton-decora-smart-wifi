@@ -207,9 +207,10 @@ class LevitonEntity(CoordinatorEntity):
     @property
     def name(self) -> str:
         """Return the name of the entity."""
+        name = self.device.name
         if description := self.entity_description.name:
-            return f"{self.device.name} {description}"
-        return None
+            return f"{name} {description}"
+        return name
 
     @property
     def unique_id(self) -> str:
