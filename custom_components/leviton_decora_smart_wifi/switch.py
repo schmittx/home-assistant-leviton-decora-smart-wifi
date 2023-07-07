@@ -83,8 +83,10 @@ async def async_setup_entry(
                             residence_id=residence.id,
                             device_id=device.id,
                             entity_description=LevitonSwitchEntityDescription(
-                                key=None,
                                 entity_category=None,
+                                has_entity_name=True,
+                                key=None,
+                                name=None,
                             ),
                         )
                     )

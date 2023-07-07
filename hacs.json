@@ -1,6 +1,7 @@
 {
 	"name": "Leviton Decora Smart Wi-Fi",
 	"content_in_root": false,
+	"homeassistant": "2023.7.0",
 	"iot_class": "Cloud Polling",
 	"render_readme": true
 }

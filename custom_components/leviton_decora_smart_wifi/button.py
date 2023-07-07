@@ -62,8 +62,9 @@ async def async_setup_entry(
                                 device_id=device.id,
                                 button_id=button.id,
                                 entity_description=LevitonButtonEntityDescription(
-                                    key=None,
                                     entity_category=None,
+                                    key=None,
+                                    name=None,
                                 ),
                             )
                         )
@@ -90,10 +91,9 @@ class LevitonButtonEntity(ButtonEntity, LevitonEntity):
     @property
     def name(self) -> str:
         """Return the name of the entity."""
-        name = super().name
-        if self.entity_description.key:
-            return name
-        return f"{name} {self.button.text}"
+        if name := self.entity_description.name:
+            return f"{self.device.name} {name}"
+        return f"{self.device.name} {self.button.text}"
 
     @property
     def unique_id(self) -> str:
