@@ -29,7 +29,6 @@ class LevitonSelectEntityDescription(SelectEntityDescription):
     )
     translation_key: str | None = "all"
 
-
 SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
     LevitonSelectEntityDescription(
         key="auto_shutoff",
@@ -91,6 +90,12 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         is_supported=lambda device: device.can_set_level and device.is_motion_sensor,
     ),
     LevitonSelectEntityDescription(
+        key="status",
+        name="Status",
+        options="status_options",
+        icon="mdi:home",
+    ),
+    LevitonSelectEntityDescription(
         key="status_led_behavior",
         name="Status LED Behavior",
         options="status_led_behavior_options",
@@ -114,11 +119,21 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
+            for description in SELECT_DESCRIPTIONS:
+                if hasattr(residence, description.key):
+                    entities.append(
+                        LevitonSelectEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            entity_description=description,
+                        )
+                    )
+
             for device in residence.devices:
                 for description in SELECT_DESCRIPTIONS:
                     if all(
                         [
-                            device.serial in conf_devices,
+                            device.id in conf_devices,
                             hasattr(device, description.key),
                             description.is_supported(device),
                         ]
@@ -128,7 +143,6 @@ async def async_setup_entry(
                                 coordinator=coordinator,
                                 residence_id=residence.id,
                                 device_id=device.id,
-                                button_id=None,
                                 entity_description=description,
                             )
                         )
@@ -144,16 +158,16 @@ class LevitonSelectEntity(SelectEntity, LevitonEntity):
     @property
     def options(self) -> list[str]:
         """Return a set of selectable options."""
-        return getattr(self.device, self.entity_description.options)
+        return getattr(self.target, self.entity_description.options)
 
     @property
     def current_option(self) -> str | None:
         """Return the selected entity option to represent the entity state."""
-        return getattr(self.device, self.entity_description.key)
+        return getattr(self.target, self.entity_description.key)
 
     def select_option(self, option: str) -> None:
         """Change the selected option."""
-        setattr(self.device, self.entity_description.key, option)
+        setattr(self.target, self.entity_description.key, option)
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""

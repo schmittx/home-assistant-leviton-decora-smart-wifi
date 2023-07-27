@@ -25,12 +25,21 @@ class LevitonSensorEntityDescription(SensorEntityDescription):
 
     entity_category: str[EntityCategory] | None = EntityCategory.DIAGNOSTIC
 
-
 SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
     LevitonSensorEntityDescription(
         key="local_ip",
         name="IP Address",
         icon="mdi:ip",
+    ),
+    LevitonSensorEntityDescription(
+        key="night_mode_begin",
+        name="Night Mode Begin",
+        icon="mdi:lightbulb-night",
+    ),
+    LevitonSensorEntityDescription(
+        key="night_mode_end",
+        name="Night Mode End",
+        icon="mdi:lightbulb-night",
     ),
 ]
 
@@ -49,11 +58,21 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
+            for description in SENSOR_DESCRIPTIONS:
+                if hasattr(residence, description.key):
+                    entities.append(
+                        LevitonSensorEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            entity_description=description,
+                        )
+                    )
+
             for device in residence.devices:
                 for description in SENSOR_DESCRIPTIONS:
                     if all(
                         [
-                            device.serial in conf_devices,
+                            device.id in conf_devices,
                             hasattr(device, description.key),
                         ]
                     ):
@@ -62,7 +81,6 @@ async def async_setup_entry(
                                 coordinator=coordinator,
                                 residence_id=residence.id,
                                 device_id=device.id,
-                                button_id=None,
                                 entity_description=description,
                             )
                         )
@@ -78,4 +96,4 @@ class LevitonSensorEntity(SensorEntity, LevitonEntity):
     @property
     def native_value(self) -> StateType | date | datetime:
         """Return the value reported by the sensor."""
-        return getattr(self.device, self.entity_description.key)
+        return getattr(self.target, self.entity_description.key)

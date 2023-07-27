@@ -28,7 +28,6 @@ class LevitonBinarySensorEntityDescription(BinarySensorEntityDescription):
 
     is_supported: Callable[[Any], bool] = lambda device: device.is_motion_sensor
 
-
 BINARY_SENSOR_DESCRIPTIONS: list[LevitonBinarySensorEntityDescription] = [
     LevitonBinarySensorEntityDescription(
         key="motion_occupied",
@@ -56,7 +55,7 @@ async def async_setup_entry(
                 for description in BINARY_SENSOR_DESCRIPTIONS:
                     if all(
                         [
-                            device.serial in conf_devices,
+                            device.id in conf_devices,
                             hasattr(device, description.key),
                             description.is_supported(device),
                         ]
@@ -66,7 +65,6 @@ async def async_setup_entry(
                                 coordinator=coordinator,
                                 residence_id=residence.id,
                                 device_id=device.id,
-                                button_id=None,
                                 entity_description=description,
                             )
                         )

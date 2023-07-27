@@ -64,7 +64,7 @@ class Device(object):
         )
 
     @property
-    def is_on(self) -> bool | None:
+    def is_on(self) -> bool:
         return bool(self.power == "ON")
 
     def turn_on(self) -> None:
@@ -227,7 +227,7 @@ class Device(object):
         return STATUS_LED_MODE_UNKNOWN
 
     @property
-    def status_led_behavior_options(self) -> list(str) | None:
+    def status_led_behavior_options(self) -> list[str] | None:
         return list(STATUS_LED_MODE_MAP.values())
 
     @status_led_behavior.setter
@@ -242,7 +242,7 @@ class Device(object):
         )
 
     @property
-    def status_led_enabled(self) -> bool | None:
+    def status_led_enabled(self) -> bool:
         return bool(self.status_led == STATUS_LED_ENABLED)
 
     @status_led_enabled.setter
@@ -272,7 +272,7 @@ class Device(object):
         return TIME_PERIOD_UNKNOWN
 
     @property
-    def led_bar_behavior_options(self) -> list(str) | None:
+    def led_bar_behavior_options(self) -> list[str] | None:
         return list(DIM_LED_MAP.values())
 
     @led_bar_behavior.setter
@@ -302,7 +302,7 @@ class Device(object):
         return LOAD_TYPE_UNKNOWN
 
     @property
-    def bulb_type_options(self) -> list(str) | None:
+    def bulb_type_options(self) -> list[str] | None:
         return list(LOAD_TYPE_MAP.values())
 
     @bulb_type.setter
@@ -343,7 +343,7 @@ class Device(object):
         return TIME_PERIOD_UNKNOWN
 
     @property
-    def fade_on_off_rate_options(self) -> list(str) | None:
+    def fade_on_off_rate_options(self) -> list[str] | None:
         return list(FADE_ON_OFF_RATE_MAP.values())
 
     @fade_off_rate.setter
@@ -424,7 +424,7 @@ class Device(object):
         return None
 
     @property
-    def auto_shutoff_options(self) -> list(str) | None:
+    def auto_shutoff_options(self) -> list[str] | None:
         return list(AUTO_SHUTOFF_MAP.values())
 
     @auto_shutoff.setter
@@ -474,13 +474,13 @@ class Device(object):
         return self.data.get("triacOff")
 
     @property
-    def bulb_threshold(self) -> str | None:
+    def bulb_threshold(self) -> str:
         if self.triac_off is not None:
             return BULB_THRESHOLD_MAP.get(self.triac_off, BULB_THRESHOLD_UNKNOWN)
         return BULB_THRESHOLD_UNKNOWN
 
     @property
-    def bulb_threshold_options(self) -> list(str) | None:
+    def bulb_threshold_options(self) -> list[str] | None:
         return list(BULB_THRESHOLD_MAP.values())
 
     @bulb_threshold.setter
@@ -533,7 +533,7 @@ class Device(object):
         return MOTION_NIGHT_MODE_UNKNOWN
 
     @property
-    def motion_night_mode_options(self) -> list(str) | None:
+    def motion_night_mode_options(self) -> list[str] | None:
         return list(MOTION_NIGHT_MODE_MAP.values())
 
     @motion_night_mode.setter
@@ -557,7 +557,7 @@ class Device(object):
         return self.data.get("motionDisable")
 
     @property
-    def motion_detection_enabled(self) -> bool | None:
+    def motion_detection_enabled(self) -> bool:
         return not bool(self.motion_disable)
 
     @motion_detection_enabled.setter
@@ -602,7 +602,7 @@ class Device(object):
         return MOTION_MODE_UNKNOWN
 
     @property
-    def motion_mode_options(self) -> list(str) | None:
+    def motion_mode_options(self) -> list[str] | None:
         return list(MOTION_MODE_MAP.values())
 
     @motion_mode.setter
@@ -645,7 +645,7 @@ class Device(object):
         )
 
     @property
-    def motion_timeout_options(self) -> list(str) | None:
+    def motion_timeout_options(self) -> list[str] | None:
         return list(MOTION_TIMEOUT_MAP.values())
 
     @property

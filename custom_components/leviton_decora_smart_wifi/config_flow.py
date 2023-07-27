@@ -130,7 +130,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
                     for device in residence.devices:
                         if device.name in user_input[CONF_DEVICES]:
-                            self.user_input[CONF_DEVICES].append(device.serial)
+                            self.user_input[CONF_DEVICES].append(device.id)
                     self.index += 1
 
         if self.index == len(self.user_input[CONF_RESIDENCES]):
@@ -203,7 +203,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             for residence in self.coordinator.data:
                 if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
-                    self.user_input[CONF_DEVICES].extend([device.serial for device in residence.devices if device.name in user_input[CONF_DEVICES]])
+                    self.user_input[CONF_DEVICES].extend([device.id for device in residence.devices if device.name in user_input[CONF_DEVICES]])
                     self.index += 1
 
         if self.index == len(self.user_input[CONF_RESIDENCES]):
@@ -215,7 +215,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
 
         for residence in self.coordinator.data:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
-                conf_devices = sorted([device.name for device in residence.devices if device.serial in self.options.get(CONF_DEVICES, self.data[CONF_DEVICES])])
+                conf_devices = sorted([device.name for device in residence.devices if device.id in self.options.get(CONF_DEVICES, self.data[CONF_DEVICES])])
                 device_names = sorted(device.name for device in residence.devices)
 
                 return self.async_show_form(

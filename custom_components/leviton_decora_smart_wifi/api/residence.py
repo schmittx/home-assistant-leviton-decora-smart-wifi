@@ -1,9 +1,11 @@
 """Leviton API"""
 from __future__ import annotations
 
-
+from .activity import Activity
+from .const import STATUS_MAP, STATUS_UNKNOWN
 from .device import Device
 from .room import Room
+from .schedule import Schedule
 
 
 class Residence(object):
@@ -21,9 +23,44 @@ class Residence(object):
         return f"{self.name} ({self.locality}, {self.region})"
 
     @property
-    def status(self) -> str | None:
+    def _status(self) -> str | None:
         return self.data.get("status")
 
+    @property
+    def status(self) -> str:
+        if self._status is not None:
+            return STATUS_MAP.get(self._status, STATUS_UNKNOWN)
+        return STATUS_UNKNOWN
+
+    @property
+    def status_options(self) -> list[str]:
+        return list(STATUS_MAP.values())
+
+    @status.setter
+    def status(self, value: str) -> None:
+        if value not in STATUS_MAP.values():
+            return
+        value = list(STATUS_MAP.keys())[list(STATUS_MAP.values()).index(value)]
+        self.api.call(
+            method="put",
+            url=f"residences/{self.id}",
+            json={"status": value},
+        )
+
+    @property
+    def is_away(self) -> bool:
+        return bool(self.status == "AWAY")
+
+    @property
+    def is_home(self) -> bool:
+        return bool(self.status == "HOME")
+
+    def set_away(self) -> None:
+        setattr(self, "status", "AWAY")
+    
+    def set_home(self) -> None:
+        setattr(self, "status", "HOME")
+    
     @property
     def street(self) -> str | None:
         return self.data.get("street")
@@ -81,9 +118,25 @@ class Residence(object):
         return self.data.get("id")
 
     @property
-    def rooms(self) -> list[Room]:
-        return [Room(self.api, self, room) for room in self.data.get("rooms", [])]
+    def night_mode_begin(self) -> int | None:
+        return self.data.get("nightModeBegin")
+
+    @property
+    def night_mode_end(self) -> int | None:
+        return self.data.get("nightModeEnd")
+
+    @property
+    def activities(self) -> list[Activity]:
+        return [Activity(self.api, self, activity) for activity in self.data.get("activities", [])]
 
     @property
     def devices(self) -> list[Device]:
         return [Device(self.api, self, device) for device in self.data.get("devices", [])]
+
+    @property
+    def rooms(self) -> list[Room]:
+        return [Room(self.api, self, room) for room in self.data.get("rooms", [])]
+
+    @property
+    def schedules(self) -> list[Schedule]:
+        return [Schedule(self.api, self, schedule) for schedule in self.data.get("schedules", [])]

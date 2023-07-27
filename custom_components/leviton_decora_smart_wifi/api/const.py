@@ -86,6 +86,15 @@ SUPPORTED_MODELS_MAP = {
     "DWVAA": [MODEL_TYPE_LIGHT, MODEL_GENERATION_1],
 }
 
+STATUS_AWAY = "away"
+STATUS_HOME = "home"
+STATUS_UNKNOWN = "unknown"
+
+STATUS_MAP = {
+    "AWAY": STATUS_AWAY,
+    "HOME": STATUS_HOME,
+}
+
 STATUS_LED_MODE_OFF = "led_always_off"
 STATUS_LED_MODE_STATUS = "status_mode"
 STATUS_LED_MODE_LOCATOR = "locator_mode"

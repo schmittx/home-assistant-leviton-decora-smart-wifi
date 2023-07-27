@@ -2,9 +2,10 @@
 # Leviton Decora Smart Wi-Fi Home Assistant Integration
 Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https://www.leviton.com/en/products/brands/decora-smart) in [Home Assistant](https://home-assistant.io).
 
-## Credit
+## Features
 - This is an complete rewrite of the existing Home Assistant core integration with support for additional devices.
-- Additional entities have been added to manage configuration for each device as well (ex. auto shutoff, max/min dimming levels, etc.)
+- Additional entities have been added to manage configuration for each device as well (ex. auto shutoff, max/min dimming levels, etc.).
+- Support for activities (`button`), Home/Away status (`select`), scenes (`scene`), and schedules (`switch`) is also included.
 
 ## Install
 1. Ensure Home Assistant is updated to version 2021.4.0 or newer.
@@ -46,3 +47,4 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 
 ## Future Plans
 - Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with async and websockets).
+- Control of night settings start/end time

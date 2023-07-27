@@ -14,7 +14,7 @@ from .const import (
 
 
 class LevitonException(Exception):
-    def __init__(self, status_code: int, name: str, message: str):
+    def __init__(self, status_code: int, name: str, message: str) -> None:
         super(LevitonException, self).__init__()
         self.status_code = status_code
         self.name = name
@@ -25,9 +25,9 @@ class LevitonAPI(object):
 
     def __init__(
             self,
-            authorization: str=None,
-            save_location: str=None,
-            user_id: str =None,
+            authorization: str = None,
+            save_location: str = None,
+            user_id: str = None,
         ) -> None:
         self.authorization = authorization
         self.save_location = save_location
@@ -41,7 +41,7 @@ class LevitonAPI(object):
             self,
             method: str,
             url: str,
-            headers: dict={},
+            headers: dict = {},
             **kwargs,
         ) -> dict[str, Any] | None:
         if method not in ("get", "post", "put"):
@@ -103,7 +103,7 @@ class LevitonAPI(object):
             else:
                 raise exception
 
-    def save_response(self, response: dict[str, Any], name: str="response") -> None:
+    def save_response(self, response: dict[str, Any], name: str = "response") -> None:
         if self.save_location and response:
             if not os.path.isdir(self.save_location):
                 os.mkdir(self.save_location)
@@ -118,7 +118,7 @@ class LevitonAPI(object):
                 )
             file.close()
 
-    def update(self) -> list[Residence]:
+    def update(self, target_residences: list[int] | None = None) -> list[Residence]:
         try:
             data = []
             permissions = self.call(
@@ -133,16 +133,31 @@ class LevitonAPI(object):
                 )
                 for residence in residences:
                     id = residence["id"]
-                    residence["rooms"] = self.call(
-                        method="get",
-                        url=f"residences/{id}/residentialrooms",
-                    )
-                    residence["devices"] = self.call(
-                        method="get",
-                        url=f"residences/{id}/iotswitches",
-                        headers={"filter": json.dumps(obj={"include": ["iotButtons"]})},
-                    )
-                    data.append(Residence(self, residence))
+                    if any(
+                        [
+                            target_residences is None,
+                            target_residences and id in target_residences,
+                        ]
+                    ):
+                        residence["activities"] = self.call(
+                            method="get",
+                            url=f"residences/{id}/residentialactivities",
+                        )
+                        residence["devices"] = self.call(
+                            method="get",
+                            url=f"residences/{id}/iotswitches",
+                            headers={"filter": json.dumps(obj={"include": ["iotButtons"]})},
+                        )
+                        residence["rooms"] = self.call(
+                            method="get",
+                            url=f"residences/{id}/residentialrooms",
+                            headers={"filter": json.dumps(obj={"include": ["residentialScenes"]})},
+                        )
+                        residence["schedules"] = self.call(
+                            method="get",
+                            url=f"residences/{id}/residentialschedules",
+                        )
+                        data.append(Residence(self, residence))
             self.data = data
         except LevitonException:
             return self.data

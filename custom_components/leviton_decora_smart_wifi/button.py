@@ -23,7 +23,6 @@ class LevitonButtonEntityDescription(ButtonEntityDescription):
 
     entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
 
-
 BUTTON_DESCRIPTIONS: list[LevitonButtonEntityDescription] = [
     LevitonButtonEntityDescription(
         key="identify",
@@ -47,38 +46,44 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
+            for activity in residence.activities:
+                entities.append(
+                    LevitonButtonEntity(
+                        coordinator=coordinator,
+                        residence_id=residence.id,
+                        activity_id=activity.id,
+                        entity_description=LevitonButtonEntityDescription(
+                            key=None,
+                            name=None,
+                        ),
+                    )
+                )
             for device in residence.devices:
-                if all(
-                    [
-                        device.serial in conf_devices,
-                        device.is_controller,
-                    ]
-                ):
-                    for button in device.buttons:
-                        entities.append(
-                            LevitonButtonEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                button_id=button.id,
-                                entity_description=LevitonButtonEntityDescription(
-                                    entity_category=None,
-                                    key=None,
-                                    name=None,
-                                ),
+                if device.id in conf_devices:
+                    if device.is_controller:
+                        for button in device.buttons:
+                            entities.append(
+                                LevitonButtonEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    button_id=button.id,
+                                    entity_description=LevitonButtonEntityDescription(
+                                        key=None,
+                                        name=None,
+                                    ),
+                                )
                             )
-                        )
-                for description in BUTTON_DESCRIPTIONS:
-                    if device.serial in conf_devices:
-                        entities.append(
-                            LevitonButtonEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                button_id=None,
-                                entity_description=description,
+                    for description in BUTTON_DESCRIPTIONS:
+                        if hasattr(device, description.key):
+                            entities.append(
+                                LevitonButtonEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                )
                             )
-                        )
 
     async_add_entities(entities)
 
@@ -88,28 +93,14 @@ class LevitonButtonEntity(ButtonEntity, LevitonEntity):
 
     entity_description: LevitonButtonEntityDescription
 
-    @property
-    def name(self) -> str:
-        """Return the name of the entity."""
-        name = super().name
-        if self.button:
-            return f"{name} {self.button.text}"
-        return name
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        unique_id = super().unique_id
-        if self.entity_description.key:
-            return unique_id
-        return f"{unique_id}-{self.button.id}"
-
     def press(self) -> None:
         """Press the button."""
-        if key := self.entity_description.key:
-            getattr(self.device, key)()
-        else:
+        if self.activity:
+            self.activity.execute()
+        elif self.button:
             self.button.press()
+        else:
+            getattr(self.device, self.entity_description.key)()
 
     async def async_press(self) -> None:
         """Press the button."""

@@ -43,7 +43,7 @@ async def async_setup_entry(
             for device in residence.devices:
                 if all(
                     [
-                        device.serial in conf_devices,
+                        device.id in conf_devices,
                         device.is_fan,
                     ]
                 ):

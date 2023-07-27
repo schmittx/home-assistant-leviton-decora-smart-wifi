@@ -47,7 +47,7 @@ async def async_setup_entry(
     for residence in coordinator.data:
         if residence.id in conf_residences:
             for device in residence.devices:
-                if device.serial in conf_devices:
+                if device.id in conf_devices:
                     entities.append(
                         LevitonUpdateEntity(
                             coordinator=coordinator,

@@ -23,9 +23,13 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import LevitonAPI, LevitonException
+from .api.activity import Activity as LevitonActivity
 from .api.button import Button as LevitonButton
 from .api.device import Device as LevitonDevice
 from .api.residence import Residence as LevitonResidence
+from .api.room import Room as LevitonRoom
+from .api.scene import Scene as LevitonScene
+from .api.schedule import Schedule as LevitonSchedule
 from .const import (
     CONF_DEVICES,
     CONF_RESIDENCES,
@@ -47,6 +51,7 @@ PLATFORMS = (
     Platform.FAN,
     Platform.LIGHT,
     Platform.NUMBER,
+    Platform.SCENE,
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
@@ -63,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     conf_residences = options.get(CONF_RESIDENCES, data.get(CONF_RESIDENCES, []))
     conf_devices = options.get(CONF_DEVICES, data.get(CONF_DEVICES, []))
-    conf_identifiers = [(DOMAIN, device_serial) for device_serial in conf_devices]
+    conf_identifiers = [(DOMAIN, conf_id) for conf_id in conf_residences + conf_devices]
 
     device_registry = dr.async_get(hass)
     device_entries = hass.helpers.device_registry.async_entries_for_config_entry(
@@ -97,9 +102,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         """
         try:
             async with async_timeout.timeout(conf_timeout):
-                return await hass.async_add_executor_job(api.update)
+                return await hass.async_add_executor_job(api.update, conf_residences)
         except LevitonException as exception:
-            raise UpdateFailed(f"Error communicating with API, Status: {exception.status_code}, Error Name: {exception.name}, Error Message: {exception.message}")
+            raise UpdateFailed("Error communicating with API, Status: {}, Error Name: {}, Error Message: {}").format(
+                exception.status_code,
+                exception.name,
+                exception.message,
+            )
 
     coordinator = DataUpdateCoordinator(
         hass=hass,
@@ -148,13 +157,21 @@ class LevitonEntity(CoordinatorEntity):
             self,
             coordinator: DataUpdateCoordinator,
             residence_id: int,
-            device_id: int,
-            button_id: int=None,
-            entity_description: EntityDescription=None,
+            activity_id: int = None,
+            schedule_id: int = None,
+            room_id: int = None,
+            scene_id: int = None,
+            device_id: int = None,
+            button_id: int = None,
+            entity_description: EntityDescription = None,
         ) -> None:
         """Initialize the device."""
         super().__init__(coordinator)
         self.residence_id = residence_id
+        self.activity_id = activity_id
+        self.schedule_id = schedule_id
+        self.room_id = room_id
+        self.scene_id = scene_id
         self.device_id = device_id
         self.button_id = button_id
         self.entity_description = entity_description
@@ -166,6 +183,32 @@ class LevitonEntity(CoordinatorEntity):
         return residences.get(self.residence_id)
 
     @property
+    def activity(self) -> LevitonActivity | None:
+        """Return a LevitonActivity object."""
+        activities = {activity.id: activity for activity in self.residence.activities}
+        return activities.get(self.activity_id)
+
+    @property
+    def schedule(self) -> LevitonSchedule | None:
+        """Return a LevitonSchedule object."""
+        schedules = {schedule.id: schedule for schedule in self.residence.schedules}
+        return schedules.get(self.schedule_id)
+
+    @property
+    def room(self) -> LevitonRoom | None:
+        """Return a LevitonRoom object."""
+        rooms = {room.id: room for room in self.residence.rooms}
+        return rooms.get(self.room_id)
+
+    @property
+    def scene(self) -> LevitonScene | None:
+        """Return a LevitonScene object."""
+        if self.room:
+            scenes = {scene.id: scene for scene in self.room.scenes}
+            return scenes.get(self.scene_id)
+        return None
+
+    @property
     def device(self) -> LevitonDevice | None:
         """Return a LevitonDevice object."""
         devices = {device.id: device for device in self.residence.devices}
@@ -174,18 +217,40 @@ class LevitonEntity(CoordinatorEntity):
     @property
     def button(self) -> LevitonButton | None:
         """Return a LevitonButton object."""
-        buttons = {button.id: button for button in self.device.buttons}
-        return buttons.get(self.button_id)
+        if self.device:
+            buttons = {button.id: button for button in self.device.buttons}
+            return buttons.get(self.button_id)
+        return None
+
+    @property
+    def target(self) -> LevitonResidence | LevitonActivity | LevitonSchedule | LevitonRoom | LevitonScene | LevitonDevice | LevitonButton | None:
+        """Return the target object."""
+        if self.button:
+            return self.button
+        elif self.device:
+            return self.device
+        elif self.scene:
+            return self.scene
+        elif self.room:
+            return self.room
+        elif self.schedule:
+            return self.schedule
+        elif self.activity:
+            return self.activity
+        return self.residence
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return all(
-            [
-                super().available,
-                self.device.is_connected,
-            ]
-        )
+        available = super().available
+        if self.device:
+            return all(
+                [
+                    available,
+                    self.device.is_connected,
+                ]
+            )
+        return available
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -193,30 +258,59 @@ class LevitonEntity(CoordinatorEntity):
 
         Implemented by platform classes.
         """
+        if self.device:
+            return DeviceInfo(
+                configuration_url=CONFIGURATION_URL,
+                hw_version=self.device.serial,
+                identifiers={(DOMAIN, self.device.id)},
+                manufacturer=self.device.manufacturer,
+                model=self.device.model,
+                name=self.device.name,
+                suggested_area=self.device.room_name,
+                sw_version=self.device.version,
+                via_device=(DOMAIN, self.residence.id),
+            )
         return DeviceInfo(
             configuration_url=CONFIGURATION_URL,
-            identifiers={(DOMAIN, self.device.mac)},
-            manufacturer=self.device.manufacturer,
-            model=self.device.model,
-            name=self.device.name,
-            suggested_area=self.device.room_name,
-            sw_version=self.device.version,
-            hw_version=self.device.serial,
+            identifiers={(DOMAIN, self.residence.id)},
+            manufacturer="Leviton Manufacturing Co., Inc.",
+            model="Residence",
+            name=self.residence.name,
         )
 
     @property
     def name(self) -> str:
         """Return the name of the entity."""
-        name = self.device.name
-        if description := self.entity_description.name:
+        name = self.residence.name
+        if self.device:
+            name = self.device.name
+        if self.activity:
+            return f"{name} {self.activity.name} Activity"
+        elif self.schedule:
+            return f"{name} {self.schedule.name} Schedule"
+        elif self.scene:
+            return f"{name} {self.scene.name} Scene"
+        elif self.button:
+            return f"{name} {self.button.text}"
+        elif description := self.entity_description.name:
             return f"{name} {description}"
         return name
 
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""
-        unique_id = self.device.mac
-        if key := self.entity_description.key:
+        unique_id = self.residence.id
+        if self.device:
+            unique_id = self.device.mac
+        if self.activity:
+            return f"{unique_id}-{self.activity.id}"
+        elif self.schedule:
+            return f"{unique_id}-{self.schedule.id}"
+        elif self.scene:
+            return f"{unique_id}-{self.room.id}-{self.scene.id}"
+        elif self.button:
+            return f"{unique_id}-{self.button.id}"
+        elif key := self.entity_description.key:
             return f"{unique_id}-{key}"
         return unique_id
 

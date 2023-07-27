@@ -1,6 +1,8 @@
 """Leviton API"""
 from __future__ import annotations
 
+from .scene import Scene
+
 
 class Room(object):
 
@@ -28,3 +30,7 @@ class Room(object):
     @property
     def id(self) -> int | None:
         return self.data.get("id")
+
+    @property
+    def scenes(self) -> list[Scene]:
+        return [Scene(self.api, self, scene) for scene in self.data.get("residentialScenes", [])]

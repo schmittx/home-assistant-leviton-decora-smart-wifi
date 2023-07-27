@@ -42,7 +42,6 @@ class LevitonNumberEntityDescription(NumberEntityDescription):
     native_step: float = STEP_LEVEL_LIGHT
     is_supported: Callable[[Any], bool] = lambda device: device.can_set_level
 
-
 NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
     LevitonNumberEntityDescription(
         key="min_level",
@@ -96,7 +95,7 @@ async def async_setup_entry(
                 for description in NUMBER_DESCRIPTIONS:
                     if all(
                         [
-                            device.serial in conf_devices,
+                            device.id in conf_devices,
                             hasattr(device, description.key),
                             description.is_supported(device),
                         ]
@@ -106,7 +105,6 @@ async def async_setup_entry(
                                 coordinator=coordinator,
                                 residence_id=residence.id,
                                 device_id=device.id,
-                                button_id=None,
                                 entity_description=description,
                             )
                         )

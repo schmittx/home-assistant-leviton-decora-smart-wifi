@@ -30,8 +30,12 @@ class LevitonSwitchEntityDescription(SwitchEntityDescription):
     entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
     is_supported: Callable[[Any], bool] = lambda device: device.is_motion_sensor
 
-
 SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
+    LevitonSwitchEntityDescription(
+        key="enabled",
+        name="Enabled",
+        icon="mdi:calendar-clock",
+    ),
     LevitonSwitchEntityDescription(
         key="motion_detection_enabled",
         name="Motion Detection",
@@ -65,36 +69,24 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for device in residence.devices:
-                if all(
-                    [
-                        device.serial in conf_devices,
-                        any(
-                            [
-                                device.is_outlet,
-                                device.is_switch,
-                            ]
+            for schedule in residence.schedules:
+                entities.append(
+                    LevitonSwitchEntity(
+                        coordinator=coordinator,
+                        residence_id=residence.id,
+                        schedule_id=schedule.id,
+                        entity_description=LevitonSwitchEntityDescription(
+                            key=None,
+                            name=None,
                         ),
-                    ]
-                ):
-                    entities.append(
-                        LevitonSwitchEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            device_id=device.id,
-                            entity_description=LevitonSwitchEntityDescription(
-                                entity_category=None,
-                                key=None,
-                                name=None,
-                            ),
-                        )
                     )
-                for description in SWITCH_DESCRIPTIONS:
-                    if all(
+                )
+            for device in residence.devices:
+                if device.id in conf_devices:
+                    if any(
                         [
-                            device.serial in conf_devices,
-                            hasattr(device, description.key),
-                            description.is_supported(device),
+                            device.is_outlet,
+                            device.is_switch,
                         ]
                     ):
                         entities.append(
@@ -102,10 +94,28 @@ async def async_setup_entry(
                                 coordinator=coordinator,
                                 residence_id=residence.id,
                                 device_id=device.id,
-                                button_id=None,
-                                entity_description=description,
+                                entity_description=LevitonSwitchEntityDescription(
+                                    entity_category=None,
+                                    key=None,
+                                    name=None,
+                                ),
                             )
                         )
+                    for description in SWITCH_DESCRIPTIONS:
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
+                            entities.append(
+                                LevitonSwitchEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                )
+                            )
 
     async_add_entities(entities)
 
@@ -118,22 +128,26 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
     @property
     def device_class(self) -> SwitchDeviceClass | str | None:
         """Return the class of this device, from component DEVICE_CLASSES."""
-        if self.entity_description.key:
-            return None
-        elif self.device.is_outlet:
-            return SwitchDeviceClass.OUTLET
-        return SwitchDeviceClass.SWITCH
+        if self.device:
+            if self.device.is_outlet:
+                return SwitchDeviceClass.OUTLET
+            return SwitchDeviceClass.SWITCH
+        return None
 
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
-        if key := self.entity_description.key:
+        if self.schedule:
+            return self.schedule.enabled
+        elif key := self.entity_description.key:
             return getattr(self.device, key)
         return self.device.is_on
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        if key := self.entity_description.key:
+        if self.schedule:
+            self.schedule.enable()
+        elif key := self.entity_description.key:
             setattr(self.device, key, True)
         else:
             self.device.turn_on()
@@ -145,7 +159,9 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        if key := self.entity_description.key:
+        if self.schedule:
+            self.schedule.disable()
+        elif key := self.entity_description.key:
             setattr(self.device, key, False)
         else:
             self.device.turn_off()
