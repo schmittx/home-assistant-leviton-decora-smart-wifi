@@ -12,7 +12,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
 from .const import (
-    CONF_DEVICES,
     CONF_RESIDENCES,
     DATA_COORDINATOR,
     DOMAIN,
@@ -31,7 +30,6 @@ async def async_setup_entry(
     """Set up a Leviton Decora Smart Wi-Fi scene entity based on a config entry."""
     entry = hass.data[DOMAIN][config_entry.entry_id]
     conf_residences = entry[CONF_RESIDENCES]
-    conf_devices = entry[CONF_DEVICES]
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonSceneEntity] = []
 

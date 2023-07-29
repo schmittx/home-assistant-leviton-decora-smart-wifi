@@ -32,11 +32,6 @@ class LevitonSwitchEntityDescription(SwitchEntityDescription):
 
 SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
     LevitonSwitchEntityDescription(
-        key="enabled",
-        name="Enabled",
-        icon="mdi:calendar-clock",
-    ),
-    LevitonSwitchEntityDescription(
         key="motion_detection_enabled",
         name="Motion Detection",
         icon="mdi:motion-sensor",
@@ -78,6 +73,7 @@ async def async_setup_entry(
                         entity_description=LevitonSwitchEntityDescription(
                             key=None,
                             name=None,
+                            icon="mdi:calendar-clock",
                         ),
                     )
                 )

@@ -93,7 +93,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         key="status",
         name="Status",
         options="status_options",
-        icon="mdi:home",
+        icon="mdi:home-switch-outline",
     ),
     LevitonSelectEntityDescription(
         key="status_led_behavior",
