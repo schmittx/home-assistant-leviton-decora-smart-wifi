@@ -15,7 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import DeviceInfo, EntityDescription
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
@@ -253,13 +253,13 @@ class LevitonEntity(CoordinatorEntity):
         return available
 
     @property
-    def device_info(self) -> DeviceInfo:
+    def device_info(self) -> dr.DeviceInfo:
         """Return device specific attributes.
 
         Implemented by platform classes.
         """
         if self.device:
-            return DeviceInfo(
+            return dr.DeviceInfo(
                 configuration_url=CONFIGURATION_URL,
                 hw_version=self.device.serial,
                 identifiers={(DOMAIN, self.device.id)},
@@ -270,7 +270,7 @@ class LevitonEntity(CoordinatorEntity):
                 sw_version=self.device.version,
                 via_device=(DOMAIN, self.residence.id),
             )
-        return DeviceInfo(
+        return dr.DeviceInfo(
             configuration_url=CONFIGURATION_URL,
             identifiers={(DOMAIN, self.residence.id)},
             manufacturer="Leviton Manufacturing Co., Inc.",
