@@ -49,7 +49,7 @@ NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
         device_class=NumberDeviceClass.POWER_FACTOR,
         native_min_value=MINIMUM_LEVEL_LIGHT,
         native_unit_of_measurement=PERCENTAGE,
-        icon="mdi:format-vertical-align-bottom",
+        icon="mdi:arrow-collapse-down",
     ),
     LevitonNumberEntityDescription(
         key="max_level",
@@ -57,7 +57,7 @@ NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
         device_class=NumberDeviceClass.POWER_FACTOR,
         native_min_value=MINIMUM_LEVEL_LIGHT,
         native_unit_of_measurement=PERCENTAGE,
-        icon="mdi:format-vertical-align-top",
+        icon="mdi:arrow-collapse-up",
     ),
     LevitonNumberEntityDescription(
         key="night_preset_level",

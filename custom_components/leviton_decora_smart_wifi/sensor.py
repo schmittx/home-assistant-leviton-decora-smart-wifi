@@ -31,16 +31,6 @@ SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
         name="IP Address",
         icon="mdi:ip",
     ),
-    LevitonSensorEntityDescription(
-        key="night_mode_begin",
-        name="Night Mode Begin",
-        icon="mdi:lightbulb-night",
-    ),
-    LevitonSensorEntityDescription(
-        key="night_mode_end",
-        name="Night Mode End",
-        icon="mdi:lightbulb-night",
-    ),
 ]
 
 

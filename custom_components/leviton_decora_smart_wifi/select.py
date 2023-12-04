@@ -72,7 +72,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         key="motion_mode",
         name="Motion Mode",
         options="motion_mode_options",
-        icon="mdi:home-switch-outline",
+        icon="mdi:exit-run",
         is_supported=lambda device: device.is_motion_sensor,
     ),
     LevitonSelectEntityDescription(
@@ -83,11 +83,18 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         is_supported=lambda device: device.is_motion_sensor,
     ),
     LevitonSelectEntityDescription(
+        key="motion_snooze",
+        name="Motion Snooze",
+        options="motion_snooze_options",
+        icon="mdi:alarm-snooze",
+        is_supported=lambda device: device.is_motion_sensor,
+    ),
+    LevitonSelectEntityDescription(
         key="motion_timeout",
         name="Motion Timeout",
         options="motion_timeout_options",
         icon="mdi:timer",
-        is_supported=lambda device: device.can_set_level and device.is_motion_sensor,
+        is_supported=lambda device: device.is_motion_sensor,
     ),
     LevitonSelectEntityDescription(
         key="status",

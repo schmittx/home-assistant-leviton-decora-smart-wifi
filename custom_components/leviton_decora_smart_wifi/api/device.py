@@ -15,6 +15,9 @@ from .const import (
     MAXIMUM_LEVEL,
     MINIMUM_LEVEL_FAN,
     MINIMUM_LEVEL_LIGHT,
+    MOTION_SNOOZE_DISABLED,
+    MOTION_SNOOZE_MAP,
+    MOTION_SNOOZE_UNKNOWN,
     MOTION_MODE_MAP,
     MOTION_MODE_UNKNOWN,
     MOTION_NIGHT_MODE_MAP,
@@ -651,6 +654,43 @@ class Device(object):
     @property
     def motion_occupied(self) -> bool | None:
         return self.data.get("motionOccupied")
+
+    @property
+    def motion_disable_time(self) -> int | None:
+        return self.data.get("motionDisableTime")
+
+    @property
+    def motion_snooze(self) -> str | None:
+        disable = self.motion_disable
+        time = self.motion_disable_time
+        if disable is not None and time is not None:
+            if not disable or not time:
+                return MOTION_SNOOZE_DISABLED
+            return MOTION_SNOOZE_MAP.get(time, MOTION_SNOOZE_UNKNOWN)
+        return MOTION_SNOOZE_UNKNOWN
+
+    @motion_snooze.setter
+    def motion_snooze(self, value: str) -> None:
+        if any(
+            [
+                value not in MOTION_SNOOZE_MAP.values(),
+                not self.is_motion_sensor,
+            ]
+        ):
+            return
+        value = list(MOTION_SNOOZE_MAP.keys())[list(MOTION_SNOOZE_MAP.values()).index(value)]
+        json = {"motionDisable": False}
+        if value:
+            json = {"motionDisable": True, "motionDisableTime": value}
+        self.api.call(
+            method="put",
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json=json,
+        )
+
+    @property
+    def motion_snooze_options(self) -> list[str] | None:
+        return list(MOTION_SNOOZE_MAP.values())
 
     @property
     def buttons(self) -> list[Button]:
