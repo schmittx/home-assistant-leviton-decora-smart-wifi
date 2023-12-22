@@ -15,7 +15,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -273,7 +272,7 @@ class LevitonEntity(CoordinatorEntity):
             )
         return dr.DeviceInfo(
             configuration_url=CONFIGURATION_URL,
-            entry_type=DeviceEntryType.SERVICE,
+            entry_type=dr.DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.residence.id)},
             manufacturer="Leviton Manufacturing Co., Inc.",
             model="Residence",
