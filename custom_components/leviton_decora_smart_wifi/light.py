@@ -6,8 +6,7 @@ from typing import Any
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    COLOR_MODE_BRIGHTNESS,
-    COLOR_MODE_ONOFF,
+    ColorMode,
     LightEntity,
     LightEntityDescription,
 )
@@ -80,18 +79,18 @@ class LevitonLightEntity(LightEntity, LevitonEntity):
         return int(self.device.brightness * 255 / self.device.max_level)
 
     @property
-    def color_mode(self) -> str:
+    def color_mode(self) -> ColorMode:
         """Return the color mode of the light."""
         if self.device.can_set_level:
-            return COLOR_MODE_BRIGHTNESS
-        return COLOR_MODE_ONOFF
+            return ColorMode.BRIGHTNESS
+        return ColorMode.ONOFF
 
     @property
-    def supported_color_modes(self) -> set[str]:
+    def supported_color_modes(self) -> set[ColorMode]:
         """Flag supported color modes."""
         if self.device.can_set_level:
-            return set([COLOR_MODE_BRIGHTNESS])
-        return set([COLOR_MODE_ONOFF])
+            return set([ColorMode.BRIGHTNESS])
+        return set([ColorMode.ONOFF])
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""

@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.fan import (
-    SUPPORT_SET_SPEED,
     FanEntity,
     FanEntityDescription,
+    FanEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -83,19 +83,29 @@ class LevitonFanEntity(FanEntity, LevitonEntity):
         return int(self.device.max_level / self.device.min_level)
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> FanEntityFeature:
         """Flag supported features."""
         if self.device.can_set_level:
-            return SUPPORT_SET_SPEED
-        return 0
+            return FanEntityFeature.SET_SPEED
+        return FanEntityFeature(0)
 
-    def turn_on(self, **kwargs: Any) -> None:
+    def turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Turn the entity on."""
         self.device.turn_on()
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Turn the entity on."""
-        await super().async_turn_on(**kwargs)
+        await super().async_turn_on(percentage, preset_mode, **kwargs)
         await self.coordinator.async_request_refresh()
 
     def turn_off(self, **kwargs: Any) -> None:

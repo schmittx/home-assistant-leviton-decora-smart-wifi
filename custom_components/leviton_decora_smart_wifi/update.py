@@ -86,7 +86,7 @@ class LevitonUpdateEntity(UpdateEntity, LevitonEntity):
         return None
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> UpdateEntityFeature:
         """Flag supported features."""
         return UpdateEntityFeature.INSTALL
 
