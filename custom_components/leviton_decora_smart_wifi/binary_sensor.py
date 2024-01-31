@@ -38,9 +38,9 @@ BINARY_SENSOR_DESCRIPTIONS: list[LevitonBinarySensorEntityDescription] = [
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up a Leviton Decora Smart Wi-Fi binary sensor entity based on a config entry."""
     entry = hass.data[DOMAIN][config_entry.entry_id]

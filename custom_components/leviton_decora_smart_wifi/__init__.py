@@ -49,6 +49,7 @@ PLATFORMS = (
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.FAN,
+    Platform.IMAGE,
     Platform.LIGHT,
     Platform.NUMBER,
     Platform.SCENE,

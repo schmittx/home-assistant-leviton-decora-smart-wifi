@@ -32,6 +32,12 @@ class LevitonSwitchEntityDescription(SwitchEntityDescription):
 
 SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
     LevitonSwitchEntityDescription(
+        key="light_sensor_enabled",
+        name="Light Sensor",
+        icon="mdi:lightbulb-on",
+        is_supported=lambda device: device.is_light_sensor,
+    ),
+    LevitonSwitchEntityDescription(
         key="motion_detection_enabled",
         name="Motion Detection",
         icon="mdi:motion-sensor",
@@ -51,9 +57,9 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up a Leviton Decora Smart Wi-Fi switch entity based on a config entry."""
     entry = hass.data[DOMAIN][config_entry.entry_id]

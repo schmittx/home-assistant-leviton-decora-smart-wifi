@@ -1,7 +1,9 @@
 """Leviton API"""
 from __future__ import annotations
 
+import io
 import logging
+import pyqrcode
 
 from .button import Button
 from .const import (
@@ -32,6 +34,7 @@ from .const import (
     SUPPORTED_MODELS_CONTROLLER,
     SUPPORTED_MODELS_FAN,
     SUPPORTED_MODELS_LIGHT,
+    SUPPORTED_MODELS_LIGHT_SENSOR,
     SUPPORTED_MODELS_MOTION_SENSOR,
     SUPPORTED_MODELS_OUTLET,
     SUPPORTED_MODELS_SWITCH,
@@ -435,7 +438,7 @@ class Device(object):
         if any(
             [
                 value not in AUTO_SHUTOFF_MAP.values(),
-                not self.is_controller,
+                self.is_motion_sensor,
             ]
         ):
             return
@@ -553,6 +556,29 @@ class Device(object):
             method="put",
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"motionNightMode": value},
+        )
+
+    @property
+    def light_enable(self) -> bool | None:
+        return self.data.get("lightEnable")
+
+    @property
+    def light_sensor_enabled(self) -> bool:
+        return bool(self.light_enable)
+
+    @light_sensor_enabled.setter
+    def light_sensor_enabled(self, value: bool) -> None:
+        if any(
+            [
+                not isinstance(value, bool),
+                not self.is_light_sensor,
+            ]
+        ):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json={"lightEnable": bool(value)},
         )
 
     @property
@@ -693,6 +719,23 @@ class Device(object):
         return list(MOTION_SNOOZE_MAP.values())
 
     @property
+    def matter_manual_code(self) -> str | None:
+        return self.data.get("matterManualCode")
+
+    @property
+    def _matter_qr_code(self) -> str | None:
+        return self.data.get("matterQRCode")
+
+    @property
+    def matter_qr_code(self) -> bytes | None:
+        if self._matter_qr_code is None:
+            return None
+        qr_stream = io.BytesIO()
+        qr_code = pyqrcode.create(self._matter_qr_code)
+        qr_code.png(qr_stream, scale=5, module_color="#000", background="#FFF")
+        return qr_stream.getvalue()
+
+    @property
     def buttons(self) -> list[Button]:
         buttons = [Button(self.api, self, button) for button in self.data.get("iotButtons", [])]
         if self.is_second_generation:
@@ -732,6 +775,10 @@ class Device(object):
         )
 
     @property
+    def is_light_sensor(self) -> bool:
+        return bool(self.model in SUPPORTED_MODELS_LIGHT_SENSOR)
+
+    @property
     def is_motion_sensor(self) -> bool:
         return bool(self.model in SUPPORTED_MODELS_MOTION_SENSOR)
 
@@ -767,3 +814,8 @@ class Device(object):
                 self.model != "D23LP",
             ]
         )
+
+    @property
+    def is_matter_capable(self) -> bool:
+        return bool(self._matter_qr_code)
+
