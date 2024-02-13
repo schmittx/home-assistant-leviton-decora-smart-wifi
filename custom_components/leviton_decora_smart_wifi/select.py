@@ -69,6 +69,13 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         is_supported=lambda device: device.has_led_bar,
     ),
     LevitonSelectEntityDescription(
+        key="motion_ambient_threshold",
+        name="Ambient Light Sensor",
+        options="motion_ambient_threshold_options",
+        icon="mdi:television-ambient-light",
+        is_supported=lambda device: device.is_motion_sensor,
+    ),
+    LevitonSelectEntityDescription(
         key="motion_mode",
         name="Motion Mode",
         options="motion_mode_options",

@@ -17,6 +17,8 @@ from .const import (
     MAXIMUM_LEVEL,
     MINIMUM_LEVEL_FAN,
     MINIMUM_LEVEL_LIGHT,
+    MOTION_AMBIENT_THRESHOLD_MAP,
+    MOTION_AMBIENT_THRESHOLD_UNKNOWN,
     MOTION_SNOOZE_DISABLED,
     MOTION_SNOOZE_MAP,
     MOTION_SNOOZE_UNKNOWN,
@@ -630,10 +632,6 @@ class Device(object):
             return MOTION_MODE_MAP.get(value, MOTION_MODE_UNKNOWN)
         return MOTION_MODE_UNKNOWN
 
-    @property
-    def motion_mode_options(self) -> list[str] | None:
-        return list(MOTION_MODE_MAP.values())
-
     @motion_mode.setter
     def motion_mode(self, value: str) -> None:
         if any(
@@ -649,6 +647,10 @@ class Device(object):
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"motionMode": value},
         )
+
+    @property
+    def motion_mode_options(self) -> list[str] | None:
+        return list(MOTION_MODE_MAP.values())
 
     @property
     def motion_timeout(self) -> str | None:
@@ -717,6 +719,33 @@ class Device(object):
     @property
     def motion_snooze_options(self) -> list[str] | None:
         return list(MOTION_SNOOZE_MAP.values())
+
+    @property
+    def motion_ambient_threshold(self) -> int | None:
+        value = self.data.get("motionAmbientThr")
+        if value is not None:
+            return MOTION_AMBIENT_THRESHOLD_MAP.get(value, MOTION_AMBIENT_THRESHOLD_UNKNOWN)
+        return MOTION_AMBIENT_THRESHOLD_UNKNOWN
+
+    @motion_ambient_threshold.setter
+    def motion_ambient_threshold(self, value: str) -> None:
+        if any(
+            [
+                value not in MOTION_AMBIENT_THRESHOLD_MAP.values(),
+                not self.is_motion_sensor,
+            ]
+        ):
+            return
+        value = list(MOTION_AMBIENT_THRESHOLD_MAP.keys())[list(MOTION_AMBIENT_THRESHOLD_MAP.values()).index(value)]
+        self.api.call(
+            method="put",
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json={"motionAmbientThr": value},
+        )
+
+    @property
+    def motion_ambient_threshold_options(self) -> list[str] | None:
+        return list(MOTION_AMBIENT_THRESHOLD_MAP.values())
 
     @property
     def matter_manual_code(self) -> str | None:
