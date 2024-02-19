@@ -76,7 +76,7 @@ class LevitonLightEntity(LightEntity, LevitonEntity):
     @property
     def brightness(self) -> int:
         """Return the brightness of this light between 0..255."""
-        return int(self.device.brightness * 255 / self.device.max_level)
+        return int(self.device.brightness * 255 / 100)
 
     @property
     def color_mode(self) -> ColorMode:
@@ -95,8 +95,7 @@ class LevitonLightEntity(LightEntity, LevitonEntity):
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
         if ATTR_BRIGHTNESS in kwargs:
-            brightness = int(kwargs[ATTR_BRIGHTNESS] * self.device.max_level / 255)
-            self.device.set_brightness(max(brightness, self.device.min_level))
+            self.device.set_brightness(int(kwargs[ATTR_BRIGHTNESS] * 100 / 255))
         else:
             self.device.turn_on()
 
