@@ -6,6 +6,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - This is an complete rewrite of the existing Home Assistant core integration with support for additional devices.
 - Additional entities have been added to manage configuration for each device as well (ex. auto shutoff, max/min dimming levels, etc.).
 - Support for activities (`button`), Home/Away status (`select`), scenes (`scene`), and schedules (`switch`) is also included.
+- Support for two-factor authentication.
 
 ## Install
 1. Ensure Home Assistant is updated to version 2021.4.0 or newer.
@@ -41,6 +42,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - DW15P
 - DW15R
 ### Switches
+- D215O
 - D215S
 - D2SCS
 - DW15S
