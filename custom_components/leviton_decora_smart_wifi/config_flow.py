@@ -4,6 +4,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import (
+    CONF_CODE,
     CONF_EMAIL,
     CONF_ID,
     CONF_NAME,
@@ -14,7 +15,7 @@ from homeassistant.const import (
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 
-from .api import LevitonAPI, LevitonException
+from .api import LOGIN_CODE_REQUIRED, LOGIN_SUCCESS, LevitonAPI, LevitonException
 from .const import (
     CONF_DEVICES,
     CONF_RESIDENCES,
@@ -45,6 +46,21 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.response = None
         self.user_input = {}
 
+    async def async_finish_login(self, errors):
+        await self.async_set_unique_id(self.api.user_id)
+        self._abort_if_unique_id_configured()
+
+        try:
+            self.response = await self.hass.async_add_executor_job(self.api.update)
+        except LevitonException as exception:
+            errors["base"] = "update_failed"
+
+        self.user_input[CONF_ID] = self.api.user_id
+        self.user_input[CONF_NAME] = self.api.user_name
+        self.user_input[CONF_TOKEN] = self.api.authorization
+
+        return await self.async_step_residences()
+
     async def async_step_user(self, user_input=None):
         errors = {}
 
@@ -54,29 +70,19 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.user_input[CONF_PASSWORD] = user_input[CONF_PASSWORD]
             self.api = LevitonAPI()
 
-            try:
-                await self.hass.async_add_executor_job(
-                    self.api.login, user_input[CONF_EMAIL], user_input[CONF_PASSWORD],
-                )
-            except LevitonException as exception:
-                _LOGGER.error(f"Status: {exception.status}, Error Message: {exception.error_message}")
-                errors["base"] = "invalid_login"
+            result = await self.hass.async_add_executor_job(
+                self.api.login,
+                self.user_input[CONF_EMAIL],
+                self.user_input[CONF_PASSWORD],
+            )
 
-            await self.async_set_unique_id(self.api.user_id)
-            self._abort_if_unique_id_configured()
-
-            try:
-                self.response = await self.hass.async_add_executor_job(self.api.update)
-            except LevitonException as exception:
-                _LOGGER.error(f"Status: {exception.status}, Error Message: {exception.error_message}")
-                errors["base"] = "update_failed"
-
-            self.user_input[CONF_ID] = self.api.user_id
-            self.user_input[CONF_EMAIL] = user_input[CONF_EMAIL]
-            self.user_input[CONF_NAME] = self.api.user_name
-            self.user_input[CONF_TOKEN] = self.api.authorization
-
-            return await self.async_step_residences()
+            if result == LOGIN_CODE_REQUIRED:
+                _LOGGER.debug(f"Two factor authentication is required for the account")
+                return await self.async_step_authenticate()
+            elif result == LOGIN_SUCCESS:
+                _LOGGER.debug(f"Login successful")
+                return await self.async_finish_login(errors)
+            errors["base"] = result
 
         return self.async_show_form(
             step_id="user",
@@ -86,6 +92,37 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_PASSWORD): cv.string,
                 }
             ),
+            errors=errors,
+        )
+
+    async def async_step_authenticate(self, user_input=None):
+        errors = {}
+
+        if user_input is not None:
+
+            self.user_input[CONF_CODE] = user_input[CONF_CODE]
+            self.api = LevitonAPI()
+
+            result = await self.hass.async_add_executor_job(
+                self.api.login,
+                self.user_input[CONF_EMAIL],
+                self.user_input[CONF_PASSWORD],
+                self.user_input[CONF_CODE],
+            )
+
+            if result == LOGIN_SUCCESS:
+                _LOGGER.debug(f"Login successful")
+                return await self.async_finish_login(errors)
+            errors["base"] = result
+
+        return self.async_show_form(
+            step_id="authenticate",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_CODE): cv.string,
+                }
+            ),
+            description_placeholders={"email": self.user_input[CONF_EMAIL]},
             errors=errors,
         )
 
@@ -114,7 +151,6 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_RESIDENCES, default=residence_names): cv.multi_select(residence_names),
                 }
             ),
-            description_placeholders={"user_name": self.user_input[CONF_NAME]},
             errors=errors,
         )
 

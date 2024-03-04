@@ -1,6 +1,12 @@
 """Leviton API"""
 API_ENDPOINT = "https://my.leviton.com/api"
 
+LOGIN_CODE_INVALID = "login_code_invalid"
+LOGIN_CODE_REQUIRED = "login_code_required"
+LOGIN_FAILED = "login_failed"
+LOGIN_SUCCESS = "login_success"
+LOGIN_TOO_MANY_ATTEMPTS = "login_too_many_attempts"
+
 BULB_THRESHOLD_NORMAL = "normal"
 BULB_THRESHOLD_MEDIUM = "medium"
 BULB_THRESHOLD_EXTENDED = "extended"

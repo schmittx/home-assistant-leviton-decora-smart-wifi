@@ -4,7 +4,11 @@
             "already_configured": "The desired account is already configured"
         },
         "error": {
-            "invalid_login": "Invalid login",
+            "login_code_invalid": "Invalid code",
+            "login_code_required": "Code required",
+            "login_failed": "Failed",
+            "login_success": "Success",
+            "login_too_many_attempts": "Too many attempts",
             "update_failed": "Update failed"
         },
         "step": {
@@ -15,6 +19,13 @@
                 },
                 "description": "Enter the email address and password associated with your account.",
                 "title": "Login to My Leviton account"
+            },
+            "authenticate": {
+                "data": {
+                    "code": "Code"
+                },
+                "description": "Enter the code that was sent to {email}.",
+                "title": "Two factor authentication required"
             },
             "residences": {
                 "data": {

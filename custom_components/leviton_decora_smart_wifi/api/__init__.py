@@ -4,13 +4,21 @@ from __future__ import annotations
 from typing import Any
 
 import json
+import logging
 import os
 import requests
 
 from .residence import Residence
 from .const import (
     API_ENDPOINT,
+    LOGIN_CODE_INVALID,
+    LOGIN_CODE_REQUIRED,
+    LOGIN_FAILED,
+    LOGIN_SUCCESS,
+    LOGIN_TOO_MANY_ATTEMPTS,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class LevitonException(Exception):
@@ -19,6 +27,7 @@ class LevitonException(Exception):
         self.status_code = status_code
         self.name = name
         self.message = message
+        _LOGGER.debug(f"\n- LevitionException\n- Status: {self.status_code}\n- Name: {self.name}\n- Message: {self.message}")
 
 
 class LevitonAPI(object):
@@ -33,9 +42,10 @@ class LevitonAPI(object):
         self.save_location = save_location
         self.user_id = user_id
 
-        self.data = []
+        self.credentials: dict = {}
+        self.data: list = []
         self.session = requests.Session()
-        self.user_name = None
+        self.user_name: str = None
 
     def call(
             self,
@@ -64,13 +74,16 @@ class LevitonAPI(object):
         self.save_response(response=response, name=url)
         return response
 
-    def login(self, email: str, password: str) -> bool:
+    def login(self, email: str, password: str, code: str | None = None) -> str:
         try:
+            data = {"email": email, "password": password}
+            if code:
+                data["code"] = code
             response = self.call(
                 method="post",
                 url="person/login",
                 params={"include": "user"},
-                data={"email": email, "password": password},
+                data=data,
             )
             self.authorization = response["id"]
             self.user_id = response["user"]["id"]
@@ -78,13 +91,42 @@ class LevitonAPI(object):
                 response["user"]["firstName"],
                 response["user"]["lastName"],
             )
-        except LevitonException:
-            return False
-        return True
+        except LevitonException as exception:
+            if all(
+                [
+                    exception.status_code == 401,
+                    exception.message == "Login Failed",
+                ]
+            ):
+                return LOGIN_FAILED
+            elif all(
+                [
+                    exception.status_code == 403,
+                    exception.message == "Too many failed attempts",
+                ]
+            ):
+                return LOGIN_TOO_MANY_ATTEMPTS
+            elif all(
+                [
+                    exception.status_code == 406,
+                    exception.message == "Insufficient Data: Person uses two factor authentication. Requires code.",
+                ]
+            ):
+                return LOGIN_CODE_REQUIRED
+            elif all(
+                [
+                    exception.status_code == 408,
+                    exception.message == "Error: Invalid code",
+                ]
+            ):
+                return LOGIN_CODE_INVALID
+            return LOGIN_FAILED
+        self.credentials = data
+        return LOGIN_SUCCESS
 
     def parse_response(self, response: requests.Response) -> dict[str, Any] | None:
         data = json.loads(response.text)
-        if data is dict and data.get("error"):
+        if response.status_code not in [200]:
             error = data["error"]
             raise LevitonException(
                 status_code=error.get("statusCode"),
@@ -97,11 +139,19 @@ class LevitonAPI(object):
         try:
             return function()
         except LevitonException as exception:
-            if (exception.status_code == 401 and exception.message == "Invalid Access Token"):
-                self.login()
+            if all(
+                [
+                    exception.status_code == 401,
+                    exception.message == "Invalid Access Token",
+                ]
+            ):
+                self.login(
+                    email=self.credentials["email"],
+                    password=self.credentials["password"],
+                    code=self.credentials.get("code"),
+                )
                 return function()
-            else:
-                raise exception
+            raise exception
 
     def save_response(self, response: dict[str, Any], name: str = "response") -> None:
         if self.save_location and response:
