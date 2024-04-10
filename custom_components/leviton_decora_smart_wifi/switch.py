@@ -32,6 +32,11 @@ class LevitonSwitchEntityDescription(SwitchEntityDescription):
 
 SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
     LevitonSwitchEntityDescription(
+        key="auto_update_enabled",
+        name="Automatic Updates",
+        icon="mdi:update",
+    ),
+    LevitonSwitchEntityDescription(
         key="light_sensor_enabled",
         name="Light Sensor",
         icon="mdi:lightbulb-on",
@@ -70,6 +75,15 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
+            for description in SWITCH_DESCRIPTIONS:
+                if hasattr(residence, description.key):
+                    entities.append(
+                        LevitonSwitchEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            entity_description=description,
+                        )
+                    )
             for schedule in residence.schedules:
                 entities.append(
                     LevitonSwitchEntity(
@@ -142,7 +156,7 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
         if self.schedule:
             return self.schedule.enabled
         elif key := self.entity_description.key:
-            return getattr(self.device, key)
+            return getattr(self.target, key)
         return self.device.is_on
 
     def turn_on(self, **kwargs: Any) -> None:
@@ -150,7 +164,7 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
         if self.schedule:
             self.schedule.enable()
         elif key := self.entity_description.key:
-            setattr(self.device, key, True)
+            setattr(self.target, key, True)
         else:
             self.device.turn_on()
 
@@ -164,7 +178,7 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
         if self.schedule:
             self.schedule.disable()
         elif key := self.entity_description.key:
-            setattr(self.device, key, False)
+            setattr(self.target, key, False)
         else:
             self.device.turn_off()
 

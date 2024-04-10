@@ -72,7 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     conf_identifiers = [(DOMAIN, conf_id) for conf_id in conf_residences + conf_devices]
 
     device_registry = dr.async_get(hass)
-    device_entries = hass.helpers.device_registry.async_entries_for_config_entry(
+    device_entries = dr.async_entries_for_config_entry(
         registry=device_registry,
         config_entry_id=config_entry.entry_id,
     )

@@ -62,6 +62,20 @@ class Residence(object):
         setattr(self, "status", "HOME")
     
     @property
+    def auto_update_enabled(self) -> bool | None:
+        return self.data.get("isAutoUpdateEnabled")
+
+    @auto_update_enabled.setter
+    def auto_update_enabled(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.id}",
+            json={"isAutoUpdateEnabled": value},
+        )
+
+    @property
     def street(self) -> str | None:
         return self.data.get("street")
 
