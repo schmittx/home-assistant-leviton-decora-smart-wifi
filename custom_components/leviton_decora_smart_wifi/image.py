@@ -55,23 +55,23 @@ async def async_setup_entry(
     for residence in coordinator.data:
         if residence.id in conf_residences:
             for device in residence.devices:
-                for description in IMAGE_DESCRIPTIONS:
-                    if all(
-                        [
-                            device.id in conf_devices,
-                            hasattr(device, description.key),
-                            description.is_supported(device),
-                        ]
-                    ):
-                        entities.append(
-                            LevitonImageEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                entity_description=description,
-                                hass=hass,
+                if device.id in conf_devices:
+                    for description in IMAGE_DESCRIPTIONS:
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
+                            entities.append(
+                                LevitonImageEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                    hass=hass,
+                                )
                             )
-                        )
 
     async_add_entities(entities)
 

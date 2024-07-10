@@ -1,10 +1,16 @@
 """Support for Leviton Decora Smart Wi-Fi sensor entities."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -12,6 +18,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from . import LevitonEntity
+from .api.const import GFCI_STATUS_OPTIONS
 from .const import (
     CONF_DEVICES,
     CONF_RESIDENCES,
@@ -24,8 +31,18 @@ class LevitonSensorEntityDescription(SensorEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi sensor entity."""
 
     entity_category: str[EntityCategory] | None = EntityCategory.DIAGNOSTIC
+    is_supported: Callable[[Any], bool] = lambda device: True
+    translation_key: str | None = "all"
 
 SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
+    LevitonSensorEntityDescription(
+        key="fault_status",
+        name="Fault Status",
+        device_class=SensorDeviceClass.ENUM,
+        options=GFCI_STATUS_OPTIONS,
+        icon="mdi:lightning-bolt-circle",
+        is_supported=lambda device: device.is_gfci,
+    ),
     LevitonSensorEntityDescription(
         key="local_ip",
         name="IP Address",
@@ -59,21 +76,22 @@ async def async_setup_entry(
                     )
 
             for device in residence.devices:
-                for description in SENSOR_DESCRIPTIONS:
-                    if all(
-                        [
-                            device.id in conf_devices,
-                            hasattr(device, description.key),
-                        ]
-                    ):
-                        entities.append(
-                            LevitonSensorEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                entity_description=description,
+                if device.id in conf_devices:
+                    for description in SENSOR_DESCRIPTIONS:
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
+                            entities.append(
+                                LevitonSensorEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                )
                             )
-                        )
 
     async_add_entities(entities)
 

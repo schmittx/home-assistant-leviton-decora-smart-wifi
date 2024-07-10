@@ -92,22 +92,22 @@ async def async_setup_entry(
     for residence in coordinator.data:
         if residence.id in conf_residences:
             for device in residence.devices:
-                for description in NUMBER_DESCRIPTIONS:
-                    if all(
-                        [
-                            device.id in conf_devices,
-                            hasattr(device, description.key),
-                            description.is_supported(device),
-                        ]
-                    ):
-                        entities.append(
-                            LevitonNumberEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                entity_description=description,
+                if device.id in conf_devices:
+                    for description in NUMBER_DESCRIPTIONS:
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
+                            entities.append(
+                                LevitonNumberEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                )
                             )
-                        )
 
     async_add_entities(entities)
 

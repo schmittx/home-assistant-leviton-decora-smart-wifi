@@ -71,6 +71,16 @@
         }
     },
     "entity": {
+        "sensor": {
+            "all": {
+                "state": {
+                    "fault": "Fault",
+                    "protected": "Protected",
+                    "test": "Test",
+                    "unknown": "Unknown"
+                }
+            }
+        },
         "select": {
             "all": {
                 "state": {

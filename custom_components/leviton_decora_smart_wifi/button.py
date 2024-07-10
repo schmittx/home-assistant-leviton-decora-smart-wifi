@@ -1,7 +1,9 @@
 """Support for Leviton Decora Smart Wi-Fi button entities."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -22,12 +24,19 @@ class LevitonButtonEntityDescription(ButtonEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi button entity."""
 
     entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
+    is_supported: Callable[[Any], bool] = lambda device: True
 
 BUTTON_DESCRIPTIONS: list[LevitonButtonEntityDescription] = [
     LevitonButtonEntityDescription(
         key="identify",
         name="Identify",
         icon="mdi:flash",
+    ),
+    LevitonButtonEntityDescription(
+        key="silence_buzzer",
+        name="Silence Audible Alert",
+        icon="mdi:volume-off",
+        is_supported=lambda device: device.is_gfci,
     ),
 ]
 
@@ -75,7 +84,12 @@ async def async_setup_entry(
                                 )
                             )
                     for description in BUTTON_DESCRIPTIONS:
-                        if hasattr(device, description.key):
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
                             entities.append(
                                 LevitonButtonEntity(
                                     coordinator=coordinator,

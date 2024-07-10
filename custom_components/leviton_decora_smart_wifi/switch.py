@@ -37,6 +37,12 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         icon="mdi:update",
     ),
     LevitonSwitchEntityDescription(
+        key="enable_buzzer",
+        name="Audible Alert",
+        icon="mdi:volume-high",
+        is_supported=lambda device: device.is_gfci,
+    ),
+    LevitonSwitchEntityDescription(
         key="light_sensor_enabled",
         name="Light Sensor",
         icon="mdi:lightbulb-on",

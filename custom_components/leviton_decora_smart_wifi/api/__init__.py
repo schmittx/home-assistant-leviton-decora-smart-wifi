@@ -1,6 +1,7 @@
 """Leviton API"""
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import json
@@ -125,24 +126,25 @@ class LevitonAPI(object):
         return LOGIN_SUCCESS
 
     def parse_response(self, response: requests.Response) -> dict[str, Any] | None:
-        data = json.loads(response.text)
+        text = json.loads(response.text)
         if response.status_code not in [200]:
-            error = data["error"]
+            error = text["error"]
             raise LevitonException(
                 status_code=error.get("statusCode"),
                 name=error.get("name"),
                 message=error.get("message"),
             )
-        return data
+        return text
 
-    def refresh(self, function):
-        try:
-            return function()
-        except LevitonException as exception:
+    def refresh(self, function: Callable) -> requests.Response:
+        response = function()
+        if response.status_code not in [200]:
+            text = json.loads(response.text)
+            error = text["error"]
             if all(
                 [
-                    exception.status_code == 401,
-                    exception.message == "Invalid Access Token",
+                    response.status_code == 401,
+                    error["message"] == "Invalid Access Token",
                 ]
             ):
                 self.login(
@@ -150,10 +152,10 @@ class LevitonAPI(object):
                     password=self.credentials["password"],
                     code=self.credentials.get("code"),
                 )
-                return function()
-            raise exception
+                response = function()
+        return response
 
-    def save_response(self, response: dict[str, Any], name: str = "response") -> None:
+    def save_response(self, response: dict[str, Any], name: str = "response"):
         if self.save_location and response:
             if not os.path.isdir(self.save_location):
                 os.mkdir(self.save_location)

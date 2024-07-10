@@ -12,6 +12,9 @@ from .const import (
     BULB_THRESHOLD_UNKNOWN,
     DIM_LED_MAP,
     FADE_ON_OFF_RATE_MAP,
+    GFCI_STATUS_MAP,
+    GFCI_STATUS_PROTECTED,
+    GFCI_STATUS_UNKNOWN,
     LOAD_TYPE_MAP,
     LOAD_TYPE_UNKNOWN,
     MAXIMUM_LEVEL,
@@ -35,6 +38,7 @@ from .const import (
     STATUS_LED_MODE_UNKNOWN,
     SUPPORTED_MODELS_CONTROLLER,
     SUPPORTED_MODELS_FAN,
+    SUPPORTED_MODELS_GFCI,
     SUPPORTED_MODELS_LIGHT,
     SUPPORTED_MODELS_LIGHT_SENSOR,
     SUPPORTED_MODELS_MOTION_SENSOR,
@@ -765,6 +769,45 @@ class Device(object):
         return qr_stream.getvalue()
 
     @property
+    def fault_detected(self) -> bool | None:
+        return bool(self.fault_status != GFCI_STATUS_PROTECTED)
+
+    @property
+    def fault_status(self) -> str | None:
+        fault = self.data.get("fault")
+        if fault is not None:
+            return GFCI_STATUS_MAP.get(fault, GFCI_STATUS_UNKNOWN)
+        return GFCI_STATUS_UNKNOWN
+
+    @property
+    def enable_buzzer(self) -> bool | None:
+        return self.data.get("enableBuzzer")
+
+    @enable_buzzer.setter
+    def enable_buzzer(self, value: bool) -> None:
+        if any(
+            [
+                not isinstance(value, bool),
+                not self.is_gfci,
+            ]
+        ):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json={"enableBuzzer": bool(value)},
+        )
+
+    def silence_buzzer(self) -> None:
+        if not self.is_gfci:
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json={"silenceBuzzer": True},
+        )
+
+    @property
     def buttons(self) -> list[Button]:
         buttons = [Button(self.api, self, button) for button in self.data.get("iotButtons", [])]
         if self.is_second_generation:
@@ -788,6 +831,10 @@ class Device(object):
                 ),
             ]
         )
+
+    @property
+    def is_gfci(self) -> bool:
+        return bool(self.model in SUPPORTED_MODELS_GFCI)
 
     @property
     def is_light(self) -> bool:

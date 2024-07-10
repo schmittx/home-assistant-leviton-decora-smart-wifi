@@ -30,6 +30,12 @@ class LevitonBinarySensorEntityDescription(BinarySensorEntityDescription):
 
 BINARY_SENSOR_DESCRIPTIONS: list[LevitonBinarySensorEntityDescription] = [
     LevitonBinarySensorEntityDescription(
+        key="fault_detected",
+        name="Fault Detected",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        is_supported=lambda device: device.is_gfci,
+    ),
+    LevitonBinarySensorEntityDescription(
         key="motion_occupied",
         name="Occupancy Detected",
         device_class=BinarySensorDeviceClass.OCCUPANCY,
@@ -52,22 +58,22 @@ async def async_setup_entry(
     for residence in coordinator.data:
         if residence.id in conf_residences:
             for device in residence.devices:
-                for description in BINARY_SENSOR_DESCRIPTIONS:
-                    if all(
-                        [
-                            device.id in conf_devices,
-                            hasattr(device, description.key),
-                            description.is_supported(device),
-                        ]
-                    ):
-                        entities.append(
-                            LevitonBinarySensorEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                entity_description=description,
+                if device.id in conf_devices:
+                    for description in BINARY_SENSOR_DESCRIPTIONS:
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
+                            entities.append(
+                                LevitonBinarySensorEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                )
                             )
-                        )
 
     async_add_entities(entities)
 

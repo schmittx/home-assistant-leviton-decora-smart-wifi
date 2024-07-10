@@ -35,7 +35,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         name="Auto Shutoff",
         options="auto_shutoff_options",
         icon="mdi:timer",
-        is_supported=lambda device: not device.is_motion_sensor,
+        is_supported=lambda device: not device.is_motion_sensor and not device.is_gfci,
     ),
     LevitonSelectEntityDescription(
         key="bulb_threshold",
@@ -114,7 +114,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         name="Status LED Behavior",
         options="status_led_behavior_options",
         icon="mdi:led-on",
-        is_supported=lambda device: not device.is_controller,
+        is_supported=lambda device: not device.is_controller and not device.is_gfci,
     ),
 ]
 
@@ -144,22 +144,22 @@ async def async_setup_entry(
                     )
 
             for device in residence.devices:
-                for description in SELECT_DESCRIPTIONS:
-                    if all(
-                        [
-                            device.id in conf_devices,
-                            hasattr(device, description.key),
-                            description.is_supported(device),
-                        ]
-                    ):
-                        entities.append(
-                            LevitonSelectEntity(
-                                coordinator=coordinator,
-                                residence_id=residence.id,
-                                device_id=device.id,
-                                entity_description=description,
+                if device.id in conf_devices:
+                    for description in SELECT_DESCRIPTIONS:
+                        if all(
+                            [
+                                hasattr(device, description.key),
+                                description.is_supported(device),
+                            ]
+                        ):
+                            entities.append(
+                                LevitonSelectEntity(
+                                    coordinator=coordinator,
+                                    residence_id=residence.id,
+                                    device_id=device.id,
+                                    entity_description=description,
+                                )
                             )
-                        )
 
     async_add_entities(entities)
 
