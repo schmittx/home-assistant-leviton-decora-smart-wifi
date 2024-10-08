@@ -85,9 +85,10 @@ class LevitonFanEntity(FanEntity, LevitonEntity):
     @property
     def supported_features(self) -> FanEntityFeature:
         """Flag supported features."""
+        supported_features = FanEntityFeature.TURN_OFF | FanEntityFeature.TURN_ON
         if self.device.can_set_level:
-            return FanEntityFeature.SET_SPEED
-        return FanEntityFeature(0)
+            supported_features = supported_features | FanEntityFeature.SET_SPEED
+        return supported_features
 
     def turn_on(
         self,
