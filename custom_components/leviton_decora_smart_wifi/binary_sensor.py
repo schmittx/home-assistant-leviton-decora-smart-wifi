@@ -26,7 +26,7 @@ from .const import (
 class LevitonBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi binary sensor entity."""
 
-    is_supported: Callable[[Any], bool] = lambda device: device.is_motion_sensor
+    is_supported: Callable[[Any], bool] = lambda device: device.has_motion_sensor
 
 BINARY_SENSOR_DESCRIPTIONS: list[LevitonBinarySensorEntityDescription] = [
     LevitonBinarySensorEntityDescription(

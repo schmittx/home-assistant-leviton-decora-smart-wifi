@@ -10,8 +10,10 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -47,6 +49,14 @@ SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
         key="local_ip",
         name="IP Address",
         icon="mdi:ip",
+    ),
+    LevitonSensorEntityDescription(
+        key="signal_strength",
+        name="Signal Strength",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        icon="mdi:wifi",
     ),
 ]
 

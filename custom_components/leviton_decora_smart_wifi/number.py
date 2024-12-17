@@ -19,6 +19,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import LevitonEntity
 from .api.const import (
     MAXIMUM_LEVEL,
+    MINIMUM_AMBIENT_THRESHOLD,
     MINIMUM_LEVEL_FAN,
     MINIMUM_LEVEL_LIGHT,
     PRESET_LEVEL_OFF,
@@ -58,6 +59,15 @@ NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
         native_min_value=MINIMUM_LEVEL_LIGHT,
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:arrow-collapse-up",
+    ),
+    LevitonNumberEntityDescription(
+        key="motion_ambient_threshold",
+        name="Ambient Light Threshold",
+        device_class=NumberDeviceClass.POWER_FACTOR,
+        native_min_value=MINIMUM_AMBIENT_THRESHOLD,
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:television-ambient-light",
+        is_supported=lambda device: device.has_motion_sensor,
     ),
     LevitonNumberEntityDescription(
         key="night_preset_level",

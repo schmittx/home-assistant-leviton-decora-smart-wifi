@@ -30,6 +30,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 ### Lights
 - D23LP
 - D26HD
+- D2ELV
 - D2MSD
 - DW1KD
 - DW3HL
@@ -52,4 +53,4 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 ## Future Plans
 - Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with async and websockets).
 - Control of night settings start/end time
-- Support for D2GF2
+- Support for D2GF2, DN15S, DN6HD, MLWSB

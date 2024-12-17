@@ -28,7 +28,7 @@ class LevitonSwitchEntityDescription(SwitchEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi switch entity."""
 
     entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
-    is_supported: Callable[[Any], bool] = lambda device: device.is_motion_sensor
+    is_supported: Callable[[Any], bool] = lambda device: device.has_motion_sensor
 
 SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
     LevitonSwitchEntityDescription(
@@ -37,7 +37,7 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         icon="mdi:update",
     ),
     LevitonSwitchEntityDescription(
-        key="enable_buzzer",
+        key="buzzer_enabled",
         name="Audible Alert",
         icon="mdi:volume-high",
         is_supported=lambda device: device.is_gfci,
@@ -46,7 +46,7 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         key="light_sensor_enabled",
         name="Light Sensor",
         icon="mdi:lightbulb-on",
-        is_supported=lambda device: device.is_light_sensor,
+        is_supported=lambda device: device.has_light_sensor,
     ),
     LevitonSwitchEntityDescription(
         key="motion_detection_enabled",
@@ -54,7 +54,7 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         icon="mdi:motion-sensor",
     ),
     LevitonSwitchEntityDescription(
-        key="motion_led_feedback",
+        key="motion_led_feedback_enabled",
         name="Motion LED Feedback",
         icon="mdi:led-on",
     ),
