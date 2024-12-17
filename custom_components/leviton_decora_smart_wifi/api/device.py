@@ -36,7 +36,6 @@ from .const import (
     MOTION_TIMEOUT_UNKNOWN,
     POWER_OFF,
     POWER_ON,
-    SECOND_GENERATION_DEVICES,
     STATUS_LED_DISABLED,
     STATUS_LED_ENABLED,
     STATUS_LED_MODE_MAP,
@@ -45,7 +44,9 @@ from .const import (
     SUPPORTED_DEVICES_FAN,
     SUPPORTED_DEVICES_GFCI,
     SUPPORTED_DEVICES_LIGHT,
+    SUPPORTED_DEVICES_MODEL,
     SUPPORTED_DEVICES_OUTLET,
+    SUPPORTED_DEVICES_SECOND_GENERATION,
     SUPPORTED_DEVICES_SWITCH,
     TIME_PERIOD_UNKNOWN,
 )
@@ -842,6 +843,10 @@ class Device(object):
         return buttons
 
     @property
+    def is_supported(self) -> bool:
+        return bool(self.model in SUPPORTED_DEVICES_MODEL)   
+
+    @property
     def is_controller(self) -> bool:
         return bool(self.model in SUPPORTED_DEVICES_CONTROLLER)
 
@@ -899,7 +904,7 @@ class Device(object):
 
     @property
     def is_second_generation(self) -> bool:
-        return bool(self.model in SECOND_GENERATION_DEVICES)
+        return bool(self.model in SUPPORTED_DEVICES_SECOND_GENERATION)
 
     @property
     def has_led_bar(self) -> bool:
