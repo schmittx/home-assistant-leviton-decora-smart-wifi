@@ -41,6 +41,8 @@ from .const import (
     DEFAULT_SAVE_RESPONSES,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
+    DEVICE_INFO_MANUFACTURER,
+    DEVICE_INFO_MODEL_RESIDENCE,
     DOMAIN,
     UNDO_UPDATE_LISTENER,
 )
@@ -83,9 +85,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         if all(orphan_identifiers):
             device_registry.async_remove_device(device_entry.id)
 
-    conf_save_responses = options.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES)
-    conf_scan_interval = options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    conf_timeout = options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
+    conf_save_responses = options.get(CONF_SAVE_RESPONSES, data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES))
+    conf_scan_interval = options.get(CONF_SCAN_INTERVAL, data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+    conf_timeout = options.get(CONF_TIMEOUT, data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT))
 
     conf_save_location = DEFAULT_SAVE_LOCATION if conf_save_responses else None
 
@@ -119,6 +121,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         update_interval=timedelta(seconds=conf_scan_interval),
     )
     await coordinator.async_refresh()
+
+    for residence in coordinator.data:
+        if residence.id in conf_residences:
+            device_registry.async_get_or_create(
+                config_entry_id=config_entry.entry_id,
+                configuration_url=CONFIGURATION_URL,
+                entry_type=dr.DeviceEntryType.SERVICE,
+                identifiers={(DOMAIN, residence.id)},
+                manufacturer=DEVICE_INFO_MANUFACTURER,
+                model=DEVICE_INFO_MODEL_RESIDENCE,
+                name=residence.name,
+            )
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][config_entry.entry_id] = {
@@ -275,8 +289,8 @@ class LevitonEntity(CoordinatorEntity):
             configuration_url=CONFIGURATION_URL,
             entry_type=dr.DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.residence.id)},
-            manufacturer="Leviton Manufacturing Co., Inc.",
-            model="Residence",
+            manufacturer=DEVICE_INFO_MANUFACTURER,
+            model=DEVICE_INFO_MODEL_RESIDENCE,
             name=self.residence.name,
         )
 
