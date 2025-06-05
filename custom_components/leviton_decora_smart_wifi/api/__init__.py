@@ -59,6 +59,7 @@ class LevitonAPI(object):
             return
         if self.authorization:
             headers["authorization"] = self.authorization
+        _LOGGER.debug(f"Calling API with method: {method} and URL: {url}")
         if method == "get":
             response = self.refresh(lambda:
                 self.session.get(url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs)
@@ -155,12 +156,14 @@ class LevitonAPI(object):
                 response = function()
         return response
 
-    def save_response(self, response: dict[str, Any], name: str = "response"):
+    def save_response(self, response: dict[str, Any], name: str = "response") -> None:
         if self.save_location and response:
             if not os.path.isdir(self.save_location):
                 os.mkdir(self.save_location)
             name = name.replace("/", "_").replace(".", "_")
-            with open(f"{self.save_location}/{name}.json", "w") as file:
+            file_path_name = f"{self.save_location}/{name}.json"
+            _LOGGER.debug(f"Saving response: {file_path_name}")
+            with open(file_path_name, "w") as file:
                 json.dump(
                     obj=response,
                     fp=file,

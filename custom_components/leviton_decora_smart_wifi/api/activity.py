@@ -21,6 +21,14 @@ class Activity(object):
     def is_button_activity(self) -> bool | None:
         return self.data.get("isButtonActivity")
 
+    @property
+    def on_away_id(self) -> int | None:
+        return self.data.get("onAwayId")
+
+    @property
+    def on_home_id(self) -> int | None:
+        return self.data.get("onHomeId")
+
     def execute(self) -> None:
         self.api.call(
             method="post",

@@ -1,8 +1,9 @@
 """Leviton API"""
 from __future__ import annotations
+from typing import Any
 
 from .activity import Activity
-from .const import STATUS_MAP, STATUS_UNKNOWN
+from .const import HOME_AWAY_ACTIVITY_DISABLED, STATUS_MAP, STATUS_UNKNOWN
 from .device import Device
 from .room import Room
 from .schedule import Schedule
@@ -76,6 +77,20 @@ class Residence(object):
         )
 
     @property
+    def random_enabled(self) -> bool | None:
+        return self.data.get("isRandomEnabled")
+
+    @random_enabled.setter
+    def random_enabled(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.id}",
+            json={"isRandomEnabled": value},
+        )
+
+    @property
     def street(self) -> str | None:
         return self.data.get("street")
 
@@ -138,6 +153,106 @@ class Residence(object):
     @property
     def night_mode_end(self) -> int | None:
         return self.data.get("nightModeEnd")
+
+    @property
+    def home_activity_enabled(self) -> bool | None:
+        return self.data.get("isOnHomeActivityEnabled")
+
+    @home_activity_enabled.setter
+    def home_activity_enabled(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.id}",
+            json={"isOnHomeActivityEnabled": value},
+        )
+
+    @property
+    def away_activity_enabled(self) -> bool | None:
+        return self.data.get("isOnAwayActivityEnabled")
+
+    @away_activity_enabled.setter
+    def away_activity_enabled(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.id}",
+            json={"isOnAwayActivityEnabled": value},
+        )
+
+    @property
+    def home_away_activity_map(self) -> dict[str, Any]:
+        return {activity.name: activity.id for activity in self.activities}
+
+    @property
+    def home_away_activity_options(self) -> list[str]:
+        return [HOME_AWAY_ACTIVITY_DISABLED] + list(self.home_away_activity_map.keys())
+
+    @property
+    def home_activity_id(self) -> int | None:
+        for activity in self.activities:
+            if activity.on_home_id == self.id:
+                return activity.id
+        return None
+
+    @property
+    def home_activity(self) -> str:
+        if self.home_activity_id:
+            return list(self.home_away_activity_map.keys())[list(self.home_away_activity_map.values()).index(self.home_activity_id)]
+        return HOME_AWAY_ACTIVITY_DISABLED
+
+    @home_activity.setter
+    def home_activity(self, value: str) -> None:
+        if value not in self.home_away_activity_options or not self.home_activity_enabled:
+            return
+        current_activity_id = self.home_activity_id
+        target_activity_id = self.home_away_activity_map.get(value)
+        if current_activity_id:
+            self.api.call(
+                method="put",
+                url=f"residentialactivities/{current_activity_id}",
+                json={"onHomeId": None},
+            )
+        if target_activity_id:
+            self.api.call(
+                method="put",
+                url=f"residentialactivities/{target_activity_id}",
+                json={"onHomeId": self.id},
+            )
+
+    @property
+    def away_activity_id(self) -> int | None:
+        for activity in self.activities:
+            if activity.on_away_id == self.id:
+                return activity.id
+        return None
+
+    @property
+    def away_activity(self) -> str:
+        if self.away_activity_id:
+            return list(self.home_away_activity_map.keys())[list(self.home_away_activity_map.values()).index(self.away_activity_id)]
+        return HOME_AWAY_ACTIVITY_DISABLED
+
+    @away_activity.setter
+    def away_activity(self, value: str) -> None:
+        if value not in self.home_away_activity_options or not self.away_activity_enabled:
+            return
+        current_activity_id = self.away_activity_id
+        target_activity_id = self.home_away_activity_map.get(value)
+        if current_activity_id:
+            self.api.call(
+                method="put",
+                url=f"residentialactivities/{current_activity_id}",
+                json={"onAwayId": None},
+            )
+        if target_activity_id:
+            self.api.call(
+                method="put",
+                url=f"residentialactivities/{target_activity_id}",
+                json={"onAwayId": self.id},
+            )
 
     @property
     def activities(self) -> list[Activity]:

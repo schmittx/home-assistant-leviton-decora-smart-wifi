@@ -59,6 +59,12 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         icon="mdi:led-on",
     ),
     LevitonSwitchEntityDescription(
+        key="random_enabled",
+        name="Randomization",
+        icon="mdi:shuffle",
+        is_supported=lambda device: device.is_fan or device.is_light or device.is_outlet or device.is_switch,
+    ),
+    LevitonSwitchEntityDescription(
         key="status_led_enabled",
         name="Status LED",
         icon="mdi:led-on",

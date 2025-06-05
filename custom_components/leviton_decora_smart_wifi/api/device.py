@@ -233,6 +233,20 @@ class Device(object):
         return self.data.get("id")
 
     @property
+    def random_enabled(self) -> bool | None:
+        return self.data.get("isRandomEnabled")
+
+    @random_enabled.setter
+    def random_enabled(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            return
+        self.api.call(
+            method="put",
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json={"isRandomEnabled": value},
+        )
+
+    @property
     def status_led(self) -> int | None:
         return self.data.get("statusLED")
 

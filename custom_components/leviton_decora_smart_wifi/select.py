@@ -38,6 +38,12 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         is_supported=lambda device: not device.has_motion_sensor and not device.is_gfci,
     ),
     LevitonSelectEntityDescription(
+        key="away_activity",
+        name="Away Activity",
+        options="home_away_activity_options",
+        icon="mdi:home-export-outline",
+    ),
+    LevitonSelectEntityDescription(
         key="bulb_type",
         name="Bulb Type",
         options="bulb_type_options",
@@ -67,6 +73,12 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         name="Fade On Rate",
         options="fade_on_off_rate_options",
         icon="mdi:network-strength-3",
+    ),
+    LevitonSelectEntityDescription(
+        key="home_activity",
+        name="Home Activity",
+        options="home_away_activity_options",
+        icon="mdi:home-import-outline",
     ),
     LevitonSelectEntityDescription(
         key="led_bar_behavior",
