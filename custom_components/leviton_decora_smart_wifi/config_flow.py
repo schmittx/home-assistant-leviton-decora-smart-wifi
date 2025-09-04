@@ -202,8 +202,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not self.user_input.get(CONF_DEVICES):
                 self.user_input[CONF_DEVICES] = []
 
+            target_residence = self.user_input[CONF_RESIDENCES][self.index]
             for residence in self.response:
-                if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
+                if residence.id == target_residence:
                     for device in residence.devices:
                         if device.name in user_input[CONF_DEVICES]:
                             self.user_input[CONF_DEVICES].append(device.id)
@@ -333,8 +334,9 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_devices(self, user_input=None):
         """Handle a flow initialized by the user."""
         if user_input is not None:
+            target_residence = self.user_input[CONF_RESIDENCES][self.index]
             for residence in self.coordinator.data:
-                if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
+                if residence.id == target_residence:
                     self.user_input[CONF_DEVICES].extend([device.id for device in residence.devices if device.name in user_input[CONF_DEVICES]])
                     self.index += 1
 
