@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi update entities."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,13 +17,8 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-    RELEASE_URL,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN, RELEASE_URL
+
 
 @dataclass
 class LevitonUpdateEntityDescription(UpdateEntityDescription):
@@ -46,19 +42,19 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for device in residence.devices:
-                if device.id in conf_devices:
-                    entities.append(
-                        LevitonUpdateEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            device_id=device.id,
-                            entity_description=LevitonUpdateEntityDescription(
-                                key="update",
-                                name="Firmware",
-                            ),
-                        )
-                    )
+            entities.extend(
+                LevitonUpdateEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    device_id=device.id,
+                    entity_description=LevitonUpdateEntityDescription(
+                        key="update",
+                        name="Firmware",
+                    ),
+                )
+                for device in residence.devices
+                if device.id in conf_devices
+            )
 
     async_add_entities(entities)
 

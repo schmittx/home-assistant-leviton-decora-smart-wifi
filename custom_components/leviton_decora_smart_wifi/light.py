@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi light entities."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,12 +16,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonLightEntityDescription(LightEntityDescription):
@@ -41,24 +38,24 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for device in residence.devices:
+            entities.extend(
+                LevitonLightEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    device_id=device.id,
+                    entity_description=LevitonLightEntityDescription(
+                        key=None,
+                        name=None,
+                    ),
+                )
+                for device in residence.devices
                 if all(
                     [
                         device.id in conf_devices,
                         device.is_light,
                     ]
-                ):
-                    entities.append(
-                        LevitonLightEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            device_id=device.id,
-                            entity_description=LevitonLightEntityDescription(
-                                key=None,
-                                name=None,
-                            ),
-                        )
-                    )
+                )
+            )
 
     async_add_entities(entities)
 
@@ -89,8 +86,8 @@ class LevitonLightEntity(LightEntity, LevitonEntity):
     def supported_color_modes(self) -> set[ColorMode]:
         """Flag supported color modes."""
         if self.device.can_set_level:
-            return set([ColorMode.BRIGHTNESS])
-        return set([ColorMode.ONOFF])
+            return {ColorMode.BRIGHTNESS}
+        return {ColorMode.ONOFF}
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""

@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi button entities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -12,12 +13,8 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonButtonEntityDescription(ButtonEntityDescription):
@@ -25,6 +22,7 @@ class LevitonButtonEntityDescription(ButtonEntityDescription):
 
     entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
     is_supported: Callable[[Any], bool] = lambda device: True
+
 
 BUTTON_DESCRIPTIONS: list[LevitonButtonEntityDescription] = [
     LevitonButtonEntityDescription(
@@ -55,49 +53,49 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for activity in residence.activities:
-                entities.append(
-                    LevitonButtonEntity(
-                        coordinator=coordinator,
-                        residence_id=residence.id,
-                        activity_id=activity.id,
-                        entity_description=LevitonButtonEntityDescription(
-                            key=None,
-                            name=None,
-                        ),
-                    )
+            entities.extend(
+                LevitonButtonEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    activity_id=activity.id,
+                    entity_description=LevitonButtonEntityDescription(
+                        key=None,
+                        name=None,
+                    ),
                 )
+                for activity in residence.activities
+            )
             for device in residence.devices:
                 if device.id in conf_devices:
-                    if device.is_controller:
-                        for button in device.buttons:
-                            entities.append(
-                                LevitonButtonEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    button_id=button.id,
-                                    entity_description=LevitonButtonEntityDescription(
-                                        key=None,
-                                        name=None,
-                                    ),
-                                )
-                            )
-                    for description in BUTTON_DESCRIPTIONS:
+                    entities.extend(
+                        LevitonButtonEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            button_id=button.id,
+                            entity_description=LevitonButtonEntityDescription(
+                                key=None,
+                                name=None,
+                            ),
+                        )
+                        for button in device.buttons
+                        if device.is_controller
+                    )
+                    entities.extend(
+                        LevitonButtonEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            entity_description=description,
+                        )
+                        for description in BUTTON_DESCRIPTIONS
                         if all(
                             [
                                 hasattr(device, description.key),
                                 description.is_supported(device),
                             ]
-                        ):
-                            entities.append(
-                                LevitonButtonEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    entity_description=description,
-                                )
-                            )
+                        )
+                    )
 
     async_add_entities(entities)
 

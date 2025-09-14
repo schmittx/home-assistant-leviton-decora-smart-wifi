@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi image entities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -15,12 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
 @dataclass
@@ -30,6 +26,7 @@ class LevitonImageEntityDescription(ImageEntityDescription):
     entity_category: str[EntityCategory] | None = EntityCategory.DIAGNOSTIC
     is_supported: Callable[[Any], bool] = lambda device: device.is_matter_capable
     state: str | None = None
+
 
 IMAGE_DESCRIPTIONS: list[LevitonImageEntityDescription] = [
     LevitonImageEntityDescription(
@@ -56,22 +53,22 @@ async def async_setup_entry(
         if residence.id in conf_residences:
             for device in residence.devices:
                 if device.id in conf_devices:
-                    for description in IMAGE_DESCRIPTIONS:
+                    entities.extend(
+                        LevitonImageEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            entity_description=description,
+                            hass=hass,
+                        )
+                        for description in IMAGE_DESCRIPTIONS
                         if all(
                             [
                                 hasattr(device, description.key),
                                 description.is_supported(device),
                             ]
-                        ):
-                            entities.append(
-                                LevitonImageEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    entity_description=description,
-                                    hass=hass,
-                                )
-                            )
+                        )
+                    )
 
     async_add_entities(entities)
 

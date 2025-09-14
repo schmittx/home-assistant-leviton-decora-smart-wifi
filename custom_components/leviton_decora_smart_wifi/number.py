@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi number entities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -26,12 +27,8 @@ from .api.const import (
     STEP_LEVEL_FAN,
     STEP_LEVEL_LIGHT,
 )
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonNumberEntityDescription(NumberEntityDescription):
@@ -42,6 +39,7 @@ class LevitonNumberEntityDescription(NumberEntityDescription):
     native_min_value: float = PRESET_LEVEL_OFF
     native_step: float = STEP_LEVEL_LIGHT
     is_supported: Callable[[Any], bool] = lambda device: device.can_set_level
+
 
 NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
     LevitonNumberEntityDescription(
@@ -103,21 +101,21 @@ async def async_setup_entry(
         if residence.id in conf_residences:
             for device in residence.devices:
                 if device.id in conf_devices:
-                    for description in NUMBER_DESCRIPTIONS:
+                    entities.extend(
+                        LevitonNumberEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            entity_description=description,
+                        )
+                        for description in NUMBER_DESCRIPTIONS
                         if all(
                             [
                                 hasattr(device, description.key),
                                 description.is_supported(device),
                             ]
-                        ):
-                            entities.append(
-                                LevitonNumberEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    entity_description=description,
-                                )
-                            )
+                        )
+                    )
 
     async_add_entities(entities)
 

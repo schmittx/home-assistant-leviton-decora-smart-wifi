@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi fan entities."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,12 +15,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonFanEntityDescription(FanEntityDescription):
@@ -40,24 +37,24 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for device in residence.devices:
+            entities.extend(
+                LevitonFanEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    device_id=device.id,
+                    entity_description=LevitonFanEntityDescription(
+                        key=None,
+                        name=None,
+                    ),
+                )
+                for device in residence.devices
                 if all(
                     [
                         device.id in conf_devices,
                         device.is_fan,
                     ]
-                ):
-                    entities.append(
-                        LevitonFanEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            device_id=device.id,
-                            entity_description=LevitonFanEntityDescription(
-                                key=None,
-                                name=None,
-                            ),
-                        )
-                    )
+                )
+            )
 
     async_add_entities(entities)
 

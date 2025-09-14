@@ -1,15 +1,15 @@
-"""Leviton API"""
+"""Leviton API."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
-
 import json
 import logging
-import os
+from pathlib import Path
+from typing import Any
+
 import requests
 
-from .residence import Residence
 from .const import (
     API_ENDPOINT,
     LOGIN_CODE_INVALID,
@@ -18,27 +18,35 @@ from .const import (
     LOGIN_SUCCESS,
     LOGIN_TOO_MANY_ATTEMPTS,
 )
+from .residence import Residence
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class LevitonException(Exception):
+    """LevitonException."""
+
     def __init__(self, status_code: int, name: str, message: str) -> None:
-        super(LevitonException, self).__init__()
+        """Initialize."""
+        super().__init__()
         self.status_code = status_code
         self.name = name
         self.message = message
-        _LOGGER.debug(f"\n- LevitionException\n- Status: {self.status_code}\n- Name: {self.name}\n- Message: {self.message}")
+        _LOGGER.debug(
+            "\n- LevitionException\n- Status: %s\n- Name: %s\n- Message: %s, self.status_code, self.name, self.message"
+        )
 
 
-class LevitonAPI(object):
+class LevitonAPI:
+    """LevitonAPI."""
 
     def __init__(
-            self,
-            authorization: str = None,
-            save_location: str = None,
-            user_id: str = None,
-        ) -> None:
+        self,
+        authorization: str | None = None,
+        save_location: str | None = None,
+        user_id: str | None = None,
+    ) -> None:
+        """Initialize."""
         self.authorization = authorization
         self.save_location = save_location
         self.user_id = user_id
@@ -49,34 +57,44 @@ class LevitonAPI(object):
         self.user_name: str = None
 
     def call(
-            self,
-            method: str,
-            url: str,
-            headers: dict = {},
-            **kwargs,
-        ) -> dict[str, Any] | None:
+        self,
+        method: str,
+        url: str,
+        headers: dict | None = None,
+        **kwargs,
+    ) -> dict[str, Any] | None:
+        """Call."""
         if method not in ("get", "post", "put"):
-            return
+            return None
+        if headers is None:
+            headers = {}
         if self.authorization:
             headers["authorization"] = self.authorization
-        _LOGGER.debug(f"Calling API with method: {method} and URL: {url}")
+        _LOGGER.debug("Calling API with method: %s and URL: %s", method, url)
         if method == "get":
-            response = self.refresh(lambda:
-                self.session.get(url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs)
+            response = self.refresh(
+                lambda: self.session.get(
+                    url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
+                )
             )
         if method == "post":
-            response = self.refresh(lambda:
-                self.session.post(url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs)
+            response = self.refresh(
+                lambda: self.session.post(
+                    url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
+                )
             )
         if method == "put":
-            response = self.refresh(lambda:
-                self.session.put(url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs)
+            response = self.refresh(
+                lambda: self.session.put(
+                    url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
+                )
             )
         response = self.parse_response(response=response)
         self.save_response(response=response, name=url)
         return response
 
     def login(self, email: str, password: str, code: str | None = None) -> str:
+        """Login."""
         try:
             data = {"email": email, "password": password}
             if code:
@@ -101,21 +119,22 @@ class LevitonAPI(object):
                 ]
             ):
                 return LOGIN_FAILED
-            elif all(
+            if all(
                 [
                     exception.status_code == 403,
                     exception.message == "Too many failed attempts",
                 ]
             ):
                 return LOGIN_TOO_MANY_ATTEMPTS
-            elif all(
+            if all(
                 [
                     exception.status_code == 406,
-                    exception.message == "Insufficient Data: Person uses two factor authentication. Requires code.",
+                    exception.message
+                    == "Insufficient Data: Person uses two factor authentication. Requires code.",
                 ]
             ):
                 return LOGIN_CODE_REQUIRED
-            elif all(
+            if all(
                 [
                     exception.status_code == 408,
                     exception.message == "Error: Invalid code",
@@ -127,6 +146,7 @@ class LevitonAPI(object):
         return LOGIN_SUCCESS
 
     def parse_response(self, response: requests.Response) -> dict[str, Any] | None:
+        """Parse the response."""
         text = json.loads(response.text)
         if response.status_code not in [200]:
             error = text["error"]
@@ -138,6 +158,7 @@ class LevitonAPI(object):
         return text
 
     def refresh(self, function: Callable) -> requests.Response:
+        """Refresh login authorization."""
         response = function()
         if response.status_code not in [200]:
             text = json.loads(response.text)
@@ -157,13 +178,15 @@ class LevitonAPI(object):
         return response
 
     def save_response(self, response: dict[str, Any], name: str = "response") -> None:
+        """Save the response to a file."""
         if self.save_location and response:
-            if not os.path.isdir(self.save_location):
-                os.mkdir(self.save_location)
+            if not Path(self.save_location).is_dir():
+                _LOGGER.debug("Creating directory: %s", self.save_location)
+                Path(self.save_location).mkdir()
             name = name.replace("/", "_").replace(".", "_")
             file_path_name = f"{self.save_location}/{name}.json"
-            _LOGGER.debug(f"Saving response: {file_path_name}")
-            with open(file_path_name, "w") as file:
+            _LOGGER.debug("Saving response: %s", file_path_name)
+            with Path(file_path_name).open(mode="w", encoding="utf-8") as file:
                 json.dump(
                     obj=response,
                     fp=file,
@@ -174,6 +197,7 @@ class LevitonAPI(object):
             file.close()
 
     def update(self, target_residences: list[int] | None = None) -> list[Residence]:
+        """Update."""
         try:
             data = []
             permissions = self.call(
@@ -187,30 +211,36 @@ class LevitonAPI(object):
                     url=f"residentialaccounts/{residential_account_id}/residences",
                 )
                 for residence in residences:
-                    id = residence["id"]
+                    residence_id = residence["id"]
                     if any(
                         [
                             target_residences is None,
-                            target_residences and id in target_residences,
+                            target_residences and residence_id in target_residences,
                         ]
                     ):
                         residence["activities"] = self.call(
                             method="get",
-                            url=f"residences/{id}/residentialactivities",
+                            url=f"residences/{residence_id}/residentialactivities",
                         )
                         residence["devices"] = self.call(
                             method="get",
-                            url=f"residences/{id}/iotswitches",
-                            headers={"filter": json.dumps(obj={"include": ["iotButtons"]})},
+                            url=f"residences/{residence_id}/iotswitches",
+                            headers={
+                                "filter": json.dumps(obj={"include": ["iotButtons"]})
+                            },
                         )
                         residence["rooms"] = self.call(
                             method="get",
-                            url=f"residences/{id}/residentialrooms",
-                            headers={"filter": json.dumps(obj={"include": ["residentialScenes"]})},
+                            url=f"residences/{residence_id}/residentialrooms",
+                            headers={
+                                "filter": json.dumps(
+                                    obj={"include": ["residentialScenes"]}
+                                )
+                            },
                         )
                         residence["schedules"] = self.call(
                             method="get",
-                            url=f"residences/{id}/residentialschedules",
+                            url=f"residences/{residence_id}/residentialschedules",
                         )
                         data.append(Residence(self, residence))
             self.data = data

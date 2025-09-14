@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi sensor entities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -21,12 +22,8 @@ from homeassistant.helpers.typing import StateType
 
 from . import LevitonEntity
 from .api.const import GFCI_STATUS_OPTIONS
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonSensorEntityDescription(SensorEntityDescription):
@@ -35,6 +32,7 @@ class LevitonSensorEntityDescription(SensorEntityDescription):
     entity_category: str[EntityCategory] | None = EntityCategory.DIAGNOSTIC
     is_supported: Callable[[Any], bool] = lambda device: True
     translation_key: str | None = "all"
+
 
 SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
     LevitonSensorEntityDescription(
@@ -75,33 +73,33 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for description in SENSOR_DESCRIPTIONS:
-                if hasattr(residence, description.key):
-                    entities.append(
-                        LevitonSensorEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            entity_description=description,
-                        )
-                    )
+            entities.extend(
+                LevitonSensorEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    entity_description=description,
+                )
+                for description in SENSOR_DESCRIPTIONS
+                if hasattr(residence, description.key)
+            )
 
             for device in residence.devices:
                 if device.id in conf_devices:
-                    for description in SENSOR_DESCRIPTIONS:
+                    entities.extend(
+                        LevitonSensorEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            entity_description=description,
+                        )
+                        for description in SENSOR_DESCRIPTIONS
                         if all(
                             [
                                 hasattr(device, description.key),
                                 description.is_supported(device),
                             ]
-                        ):
-                            entities.append(
-                                LevitonSensorEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    entity_description=description,
-                                )
-                            )
+                        )
+                    )
 
     async_add_entities(entities)
 

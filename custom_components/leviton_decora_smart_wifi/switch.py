@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi switch entities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -16,12 +17,8 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonSwitchEntityDescription(SwitchEntityDescription):
@@ -29,6 +26,7 @@ class LevitonSwitchEntityDescription(SwitchEntityDescription):
 
     entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
     is_supported: Callable[[Any], bool] = lambda device: device.has_motion_sensor
+
 
 SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
     LevitonSwitchEntityDescription(
@@ -62,7 +60,10 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         key="random_enabled",
         name="Randomization",
         icon="mdi:shuffle",
-        is_supported=lambda device: device.is_fan or device.is_light or device.is_outlet or device.is_switch,
+        is_supported=lambda device: device.is_fan
+        or device.is_light
+        or device.is_outlet
+        or device.is_switch,
     ),
     LevitonSwitchEntityDescription(
         key="status_led_enabled",
@@ -87,28 +88,28 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for description in SWITCH_DESCRIPTIONS:
-                if hasattr(residence, description.key):
-                    entities.append(
-                        LevitonSwitchEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            entity_description=description,
-                        )
-                    )
-            for schedule in residence.schedules:
-                entities.append(
-                    LevitonSwitchEntity(
-                        coordinator=coordinator,
-                        residence_id=residence.id,
-                        schedule_id=schedule.id,
-                        entity_description=LevitonSwitchEntityDescription(
-                            key=None,
-                            name=None,
-                            icon="mdi:calendar-clock",
-                        ),
-                    )
+            entities.extend(
+                LevitonSwitchEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    entity_description=description,
                 )
+                for description in SWITCH_DESCRIPTIONS
+                if hasattr(residence, description.key)
+            )
+            entities.extend(
+                LevitonSwitchEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    schedule_id=schedule.id,
+                    entity_description=LevitonSwitchEntityDescription(
+                        key=None,
+                        name=None,
+                        icon="mdi:calendar-clock",
+                    ),
+                )
+                for schedule in residence.schedules
+            )
             for device in residence.devices:
                 if device.id in conf_devices:
                     if any(
@@ -129,21 +130,21 @@ async def async_setup_entry(
                                 ),
                             )
                         )
-                    for description in SWITCH_DESCRIPTIONS:
+                    entities.extend(
+                        LevitonSwitchEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            entity_description=description,
+                        )
+                        for description in SWITCH_DESCRIPTIONS
                         if all(
                             [
                                 hasattr(device, description.key),
                                 description.is_supported(device),
                             ]
-                        ):
-                            entities.append(
-                                LevitonSwitchEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    entity_description=description,
-                                )
-                            )
+                        )
+                    )
 
     async_add_entities(entities)
 
@@ -167,7 +168,7 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
         """Return True if entity is on."""
         if self.schedule:
             return self.schedule.enabled
-        elif key := self.entity_description.key:
+        if key := self.entity_description.key:
             return getattr(self.target, key)
         return self.device.is_on
 

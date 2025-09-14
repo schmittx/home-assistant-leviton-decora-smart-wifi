@@ -1,7 +1,8 @@
 """The Leviton Decora Smart Wi-Fi integration."""
+
 from __future__ import annotations
 
-import async_timeout
+from asyncio import timeout
 from datetime import timedelta
 import logging
 
@@ -36,6 +37,7 @@ from .const import (
     CONF_SAVE_RESPONSES,
     CONF_TIMEOUT,
     CONFIGURATION_URL,
+    DATA_API,
     DATA_COORDINATOR,
     DEFAULT_SAVE_LOCATION,
     DEFAULT_SAVE_RESPONSES,
@@ -79,14 +81,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         config_entry_id=config_entry.entry_id,
     )
     for device_entry in device_entries:
-        orphan_identifiers: list[bool] = []
-        for device_identifier in device_entry.identifiers:
-            orphan_identifiers.append(bool(device_identifier not in conf_identifiers))
+        orphan_identifiers = [
+            bool(device_identifier not in conf_identifiers)
+            for device_identifier in device_entry.identifiers
+        ]
         if all(orphan_identifiers):
+            _LOGGER.debug(
+                "Removing device entry: %s (%s)", device_entry.id, device_entry.name
+            )
             device_registry.async_remove_device(device_entry.id)
 
-    conf_save_responses = options.get(CONF_SAVE_RESPONSES, data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES))
-    conf_scan_interval = options.get(CONF_SCAN_INTERVAL, data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+    conf_save_responses = options.get(
+        CONF_SAVE_RESPONSES, data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES)
+    )
+    conf_scan_interval = options.get(
+        CONF_SCAN_INTERVAL, data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    )
     conf_timeout = options.get(CONF_TIMEOUT, data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT))
 
     conf_save_location = DEFAULT_SAVE_LOCATION if conf_save_responses else None
@@ -104,14 +114,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         so entities can quickly look up their data.
         """
         try:
-            async with async_timeout.timeout(conf_timeout):
+            async with timeout(conf_timeout):
                 return await hass.async_add_executor_job(api.update, conf_residences)
         except LevitonException as exception:
-            raise UpdateFailed("Error communicating with API, Status: {}, Error Name: {}, Error Message: {}").format(
+            raise UpdateFailed(
+                "Error communicating with API, Status: {}, Error Name: {}, Error Message: {}"
+            ).format(
                 exception.status_code,
                 exception.name,
                 exception.message,
-            )
+            ) from LevitonException
 
     coordinator = DataUpdateCoordinator(
         hass=hass,
@@ -138,6 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.data[DOMAIN][config_entry.entry_id] = {
         CONF_RESIDENCES: conf_residences,
         CONF_DEVICES: conf_devices,
+        DATA_API: api,
         DATA_COORDINATOR: coordinator,
         UNDO_UPDATE_LISTENER: config_entry.add_update_listener(async_update_listener),
     }
@@ -169,17 +182,17 @@ class LevitonEntity(CoordinatorEntity):
     """Representation of a Leviton entity."""
 
     def __init__(
-            self,
-            coordinator: DataUpdateCoordinator,
-            residence_id: int,
-            activity_id: int = None,
-            schedule_id: int = None,
-            room_id: int = None,
-            scene_id: int = None,
-            device_id: int = None,
-            button_id: int = None,
-            entity_description: EntityDescription = None,
-        ) -> None:
+        self,
+        coordinator: DataUpdateCoordinator,
+        residence_id: int,
+        activity_id: int | None = None,
+        schedule_id: int | None = None,
+        room_id: int | None = None,
+        scene_id: int | None = None,
+        device_id: int | None = None,
+        button_id: int | None = None,
+        entity_description: EntityDescription = None,
+    ) -> None:
         """Initialize the device."""
         super().__init__(coordinator)
         self.residence_id = residence_id
@@ -238,19 +251,30 @@ class LevitonEntity(CoordinatorEntity):
         return None
 
     @property
-    def target(self) -> LevitonResidence | LevitonActivity | LevitonSchedule | LevitonRoom | LevitonScene | LevitonDevice | LevitonButton | None:
+    def target(
+        self,
+    ) -> (
+        LevitonResidence
+        | LevitonActivity
+        | LevitonSchedule
+        | LevitonRoom
+        | LevitonScene
+        | LevitonDevice
+        | LevitonButton
+        | None
+    ):
         """Return the target object."""
         if self.button:
             return self.button
-        elif self.device:
+        if self.device:
             return self.device
-        elif self.scene:
+        if self.scene:
             return self.scene
-        elif self.room:
+        if self.room:
             return self.room
-        elif self.schedule:
+        if self.schedule:
             return self.schedule
-        elif self.activity:
+        if self.activity:
             return self.activity
         return self.residence
 
@@ -302,13 +326,13 @@ class LevitonEntity(CoordinatorEntity):
             name = self.device.name
         if self.activity:
             return f"{name} {self.activity.name} Activity"
-        elif self.schedule:
+        if self.schedule:
             return f"{name} {self.schedule.name} Schedule"
-        elif self.scene:
+        if self.scene:
             return f"{name} {self.scene.name} Scene"
-        elif self.button:
+        if self.button:
             return f"{name} {self.button.text}"
-        elif description := self.entity_description.name:
+        if description := self.entity_description.name:
             return f"{name} {description}"
         return name
 
@@ -320,13 +344,12 @@ class LevitonEntity(CoordinatorEntity):
             unique_id = self.device.mac
         if self.activity:
             return f"{unique_id}-{self.activity.id}"
-        elif self.schedule:
+        if self.schedule:
             return f"{unique_id}-{self.schedule.id}"
-        elif self.scene:
+        if self.scene:
             return f"{unique_id}-{self.room.id}-{self.scene.id}"
-        elif self.button:
+        if self.button:
             return f"{unique_id}-{self.button.id}"
-        elif key := self.entity_description.key:
+        if key := self.entity_description.key:
             return f"{unique_id}-{key}"
         return unique_id
-

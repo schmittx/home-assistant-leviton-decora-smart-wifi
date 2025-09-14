@@ -1,4 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi select entities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -12,12 +13,8 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .const import (
-    CONF_DEVICES,
-    CONF_RESIDENCES,
-    DATA_COORDINATOR,
-    DOMAIN,
-)
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+
 
 @dataclass
 class LevitonSelectEntityDescription(SelectEntityDescription):
@@ -28,6 +25,7 @@ class LevitonSelectEntityDescription(SelectEntityDescription):
         device.can_set_level and device.is_light
     )
     translation_key: str | None = "all"
+
 
 SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
     LevitonSelectEntityDescription(
@@ -62,7 +60,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         icon="mdi:sine-wave",
         is_supported=lambda device: device.is_elv_capable,
     ),
-   LevitonSelectEntityDescription(
+    LevitonSelectEntityDescription(
         key="fade_off_rate",
         name="Fade Off Rate",
         options="fade_on_off_rate_options",
@@ -145,33 +143,33 @@ async def async_setup_entry(
 
     for residence in coordinator.data:
         if residence.id in conf_residences:
-            for description in SELECT_DESCRIPTIONS:
-                if hasattr(residence, description.key):
-                    entities.append(
-                        LevitonSelectEntity(
-                            coordinator=coordinator,
-                            residence_id=residence.id,
-                            entity_description=description,
-                        )
-                    )
+            entities.extend(
+                LevitonSelectEntity(
+                    coordinator=coordinator,
+                    residence_id=residence.id,
+                    entity_description=description,
+                )
+                for description in SELECT_DESCRIPTIONS
+                if hasattr(residence, description.key)
+            )
 
             for device in residence.devices:
                 if device.id in conf_devices:
-                    for description in SELECT_DESCRIPTIONS:
+                    entities.extend(
+                        LevitonSelectEntity(
+                            coordinator=coordinator,
+                            residence_id=residence.id,
+                            device_id=device.id,
+                            entity_description=description,
+                        )
+                        for description in SELECT_DESCRIPTIONS
                         if all(
                             [
                                 hasattr(device, description.key),
                                 description.is_supported(device),
                             ]
-                        ):
-                            entities.append(
-                                LevitonSelectEntity(
-                                    coordinator=coordinator,
-                                    residence_id=residence.id,
-                                    device_id=device.id,
-                                    entity_description=description,
-                                )
-                            )
+                        )
+                    )
 
     async_add_entities(entities)
 

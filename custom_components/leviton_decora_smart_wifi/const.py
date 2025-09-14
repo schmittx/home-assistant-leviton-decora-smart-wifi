@@ -1,4 +1,5 @@
 """Constants used by the Leviton Decora Smart Wi-Fi integration."""
+
 CONF_DEVICES: str = "devices"
 CONF_RESIDENCES: str = "residences"
 CONF_SAVE_RESPONSES: str = "save_responses"
@@ -6,6 +7,7 @@ CONF_TIMEOUT: str = "timeout"
 
 CONFIGURATION_URL: str = "https://my.leviton.com/home"
 
+DATA_API: str = "api"
 DATA_COORDINATOR: str = "coordinator"
 
 DOMAIN: str = "leviton_decora_smart_wifi"

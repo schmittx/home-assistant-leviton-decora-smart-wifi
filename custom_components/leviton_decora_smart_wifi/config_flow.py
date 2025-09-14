@@ -1,11 +1,12 @@
 """Adds config flow for Leviton Decora Smart Wi-Fi integration."""
+
 import logging
-import voluptuous as vol
 from typing import Any
+
+import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import (
-    UnitOfTime,
     CONF_CODE,
     CONF_EMAIL,
     CONF_ID,
@@ -13,6 +14,7 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_TOKEN,
+    UnitOfTime,
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
@@ -33,7 +35,7 @@ from .const import (
     CONF_RESIDENCES,
     CONF_SAVE_RESPONSES,
     CONF_TIMEOUT,
-    DATA_COORDINATOR,
+    DATA_API,
     DEFAULT_SAVE_RESPONSES,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
@@ -55,7 +57,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize."""
         self.api = None
         self.index = 0
@@ -68,12 +70,13 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.user_input[CONF_NAME]
 
     async def async_finish_login(self, errors):
+        """Async finish login."""
         await self.async_set_unique_id(self.api.user_id)
         self._abort_if_unique_id_configured()
 
         try:
             self.response = await self.hass.async_add_executor_job(self.api.update)
-        except LevitonException as exception:
+        except LevitonException:
             errors["base"] = "update_failed"
 
         self.user_input[CONF_ID] = self.api.user_id
@@ -83,10 +86,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_residences()
 
     async def async_step_user(self, user_input=None):
+        """Async step user."""
         errors = {}
 
         if user_input is not None:
-
             self.user_input[CONF_EMAIL] = user_input[CONF_EMAIL]
             self.user_input[CONF_PASSWORD] = user_input[CONF_PASSWORD]
             self.api = LevitonAPI()
@@ -98,10 +101,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
             if result == LOGIN_CODE_REQUIRED:
-                _LOGGER.debug(f"Two factor authentication is required for the account")
+                _LOGGER.debug("Two factor authentication is required for the account")
                 return await self.async_step_authenticate()
-            elif result == LOGIN_SUCCESS:
-                _LOGGER.debug(f"Login successful")
+            if result == LOGIN_SUCCESS:
+                _LOGGER.debug("Login successful")
                 return await self.async_finish_login(errors)
             errors["base"] = result
 
@@ -125,10 +128,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_authenticate(self, user_input=None):
+        """Async step authenticate."""
         errors = {}
 
         if user_input is not None:
-
             self.user_input[CONF_CODE] = user_input[CONF_CODE]
             self.api = LevitonAPI()
 
@@ -140,7 +143,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
             if result == LOGIN_SUCCESS:
-                _LOGGER.debug(f"Login successful")
+                _LOGGER.debug("Login successful")
                 return await self.async_finish_login(errors)
             errors["base"] = result
 
@@ -160,10 +163,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_residences(self, user_input=None):
+        """Async step residences."""
         errors = {}
 
         if user_input is not None:
-
             self.user_input[CONF_RESIDENCES] = []
 
             for residence in self.response:
@@ -181,7 +184,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="residences",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_RESIDENCES, default=residence_names): SelectSelector(
+                    vol.Optional(
+                        CONF_RESIDENCES, default=residence_names
+                    ): SelectSelector(
                         SelectSelectorConfig(
                             options=residence_names,
                             multiple=True,
@@ -195,10 +200,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_devices(self, user_input=None):
+        """Async step devices."""
         errors = {}
 
         if user_input is not None:
-
             if not self.user_input.get(CONF_DEVICES):
                 self.user_input[CONF_DEVICES] = []
 
@@ -214,33 +219,37 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.index = 0
             if self.show_advanced_options:
                 return await self.async_step_advanced()
-            return self.async_create_entry(title=self.config_title, data=self.user_input)
+            return self.async_create_entry(
+                title=self.config_title, data=self.user_input
+            )
 
         for residence in self.response:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
-                device_names = [device.name for device in residence.devices if device.is_supported]
+                device_names = [
+                    device.name for device in residence.devices if device.is_supported
+                ]
 
-                if not device_names:
-                    self.index += 1
-                    return await self.async_step_devices()
+        if not device_names:
+            self.index += 1
+            return await self.async_step_devices()
 
-                return self.async_show_form(
-                    step_id="devices",
-                    data_schema=vol.Schema(
-                        {
-                            vol.Optional(CONF_DEVICES, default=device_names): SelectSelector(
-                                SelectSelectorConfig(
-                                    options=device_names,
-                                    multiple=True,
-                                    mode=SelectSelectorMode.DROPDOWN,
-                                    sort=True,
-                                )
-                            ),
-                        }
+        return self.async_show_form(
+            step_id="devices",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_DEVICES, default=device_names): SelectSelector(
+                        SelectSelectorConfig(
+                            options=device_names,
+                            multiple=True,
+                            mode=SelectSelectorMode.DROPDOWN,
+                            sort=True,
+                        )
                     ),
-                    description_placeholders={"residence_name": residence.name_location},
-                    errors=errors,
-                )
+                }
+            ),
+            description_placeholders={"residence_name": residence.name_location},
+            errors=errors,
+        )
 
     async def async_step_advanced(self, user_input=None):
         """Handle a flow initialized by the user."""
@@ -248,14 +257,20 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.user_input[CONF_SAVE_RESPONSES] = user_input[CONF_SAVE_RESPONSES]
             self.user_input[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
             self.user_input[CONF_TIMEOUT] = user_input[CONF_TIMEOUT]
-            return self.async_create_entry(title=self.config_title, data=self.user_input)
+            return self.async_create_entry(
+                title=self.config_title, data=self.user_input
+            )
 
         return self.async_show_form(
             step_id="advanced",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_SAVE_RESPONSES, default=DEFAULT_SAVE_RESPONSES): BooleanSelector(),
-                    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): NumberSelector(
+                    vol.Optional(
+                        CONF_SAVE_RESPONSES, default=DEFAULT_SAVE_RESPONSES
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+                    ): NumberSelector(
                         NumberSelectorConfig(
                             min=MIN_SCAN_INTERVAL,
                             max=MAX_SCAN_INTERVAL,
@@ -285,10 +300,12 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
     """Config flow options for Leviton Decora Smart Wi-Fi."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Leviton Decora Smart Wi-Fi options flow."""
-        self.coordinator = None
+        self.api = None
+        #        self.coordinator = None
         self.index = 0
+        self.response = None
         self.user_input = {}
 
     @property
@@ -301,25 +318,40 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         """Return the options from a config entry."""
         return self.config_entry.options
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(self, errors):
         """Manage the options."""
-        self.coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id][DATA_COORDINATOR]
+        self.api = self.hass.data[DOMAIN][self.config_entry.entry_id][DATA_API]
+        try:
+            self.response = await self.hass.async_add_executor_job(self.api.update)
+        except LevitonException:
+            errors["base"] = "update_failed"
         return await self.async_step_residences()
 
     async def async_step_residences(self, user_input=None):
         """Handle a flow initialized by the user."""
         if user_input is not None:
-            self.user_input[CONF_RESIDENCES] = [residence.id for residence in self.coordinator.data if residence.name_location in user_input[CONF_RESIDENCES]]
+            self.user_input[CONF_RESIDENCES] = [
+                residence.id
+                for residence in self.response
+                if residence.name_location in user_input[CONF_RESIDENCES]
+            ]
             return await self.async_step_devices()
 
-        conf_residences = [residence.name_location for residence in self.coordinator.data if residence.id in self.options.get(CONF_RESIDENCES, self.data[CONF_RESIDENCES])]
-        residence_names = [residence.name_location for residence in self.coordinator.data]
+        conf_residences = [
+            residence.name_location
+            for residence in self.response
+            if residence.id
+            in self.options.get(CONF_RESIDENCES, self.data[CONF_RESIDENCES])
+        ]
+        residence_names = [residence.name_location for residence in self.response]
 
         return self.async_show_form(
             step_id="residences",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_RESIDENCES, default=conf_residences): SelectSelector(
+                    vol.Optional(
+                        CONF_RESIDENCES, default=conf_residences
+                    ): SelectSelector(
                         SelectSelectorConfig(
                             options=residence_names,
                             multiple=True,
@@ -335,39 +367,52 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         """Handle a flow initialized by the user."""
         if user_input is not None:
             target_residence = self.user_input[CONF_RESIDENCES][self.index]
-            for residence in self.coordinator.data:
+            for residence in self.response:
                 if residence.id == target_residence:
-                    self.user_input[CONF_DEVICES].extend([device.id for device in residence.devices if device.name in user_input[CONF_DEVICES]])
+                    self.user_input[CONF_DEVICES].extend(
+                        [
+                            device.id
+                            for device in residence.devices
+                            if device.name in user_input[CONF_DEVICES]
+                        ]
+                    )
                     self.index += 1
 
         if self.index == len(self.user_input[CONF_RESIDENCES]):
             if self.show_advanced_options:
                 return await self.async_step_advanced()
             return self.async_create_entry(title="", data=self.user_input)
-        elif self.index == 0:
+        if self.index == 0:
             self.user_input[CONF_DEVICES] = []
 
-        for residence in self.coordinator.data:
+        for residence in self.response:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
-                conf_devices = [device.name for device in residence.devices if device.id in self.options.get(CONF_DEVICES, self.data[CONF_DEVICES])]
-                device_names = [device.name for device in residence.devices if device.is_supported]
+                conf_devices = [
+                    device.name
+                    for device in residence.devices
+                    if device.id
+                    in self.options.get(CONF_DEVICES, self.data[CONF_DEVICES])
+                ]
+                device_names = [
+                    device.name for device in residence.devices if device.is_supported
+                ]
 
-                return self.async_show_form(
-                    step_id="devices",
-                    data_schema=vol.Schema(
-                        {
-                            vol.Optional(CONF_DEVICES, default=conf_devices): SelectSelector(
-                                SelectSelectorConfig(
-                                    options=device_names,
-                                    multiple=True,
-                                    mode=SelectSelectorMode.DROPDOWN,
-                                    sort=True,
-                                )
-                            ),
-                        }
+        return self.async_show_form(
+            step_id="devices",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_DEVICES, default=conf_devices): SelectSelector(
+                        SelectSelectorConfig(
+                            options=device_names,
+                            multiple=True,
+                            mode=SelectSelectorMode.DROPDOWN,
+                            sort=True,
+                        )
                     ),
-                    description_placeholders={"residence_name": residence.name_location},
-                )
+                }
+            ),
+            description_placeholders={"residence_name": residence.name_location},
+        )
 
     async def async_step_advanced(self, user_input=None):
         """Handle a flow initialized by the user."""
@@ -377,16 +422,27 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
             self.user_input[CONF_TIMEOUT] = user_input[CONF_TIMEOUT]
             return self.async_create_entry(title="", data=self.user_input)
 
-        conf_save_responses = self.options.get(CONF_SAVE_RESPONSES, self.data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES))
-        conf_scan_interval = self.options.get(CONF_SCAN_INTERVAL, self.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
-        conf_timeout = self.options.get(CONF_TIMEOUT, self.data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT))
+        conf_save_responses = self.options.get(
+            CONF_SAVE_RESPONSES,
+            self.data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES),
+        )
+        conf_scan_interval = self.options.get(
+            CONF_SCAN_INTERVAL, self.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
+        conf_timeout = self.options.get(
+            CONF_TIMEOUT, self.data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
+        )
 
         return self.async_show_form(
             step_id="advanced",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_SAVE_RESPONSES, default=conf_save_responses): BooleanSelector(),
-                    vol.Optional(CONF_SCAN_INTERVAL, default=conf_scan_interval): NumberSelector(
+                    vol.Optional(
+                        CONF_SAVE_RESPONSES, default=conf_save_responses
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL, default=conf_scan_interval
+                    ): NumberSelector(
                         NumberSelectorConfig(
                             min=MIN_SCAN_INTERVAL,
                             max=MAX_SCAN_INTERVAL,
