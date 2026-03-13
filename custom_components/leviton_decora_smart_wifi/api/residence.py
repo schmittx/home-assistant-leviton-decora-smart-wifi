@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Literal
 
 from .activity import Activity
-from .const import HOME_AWAY_ACTIVITY_DISABLED, STATUS_MAP, STATUS_UNKNOWN
+from .const import HOME_AWAY_ACTIVITY_DISABLED, STATUS_MAP, Status
 from .device import Device
 from .room import Room
 from .schedule import Schedule
@@ -37,8 +37,8 @@ class Residence:
     def status(self) -> str:
         """Status."""
         if self._status is not None:
-            return STATUS_MAP.get(self._status, STATUS_UNKNOWN)
-        return STATUS_UNKNOWN
+            return STATUS_MAP.get(self._status, Status.UNKNOWN)
+        return Status.UNKNOWN
 
     @property
     def status_options(self) -> list[str]:
@@ -46,14 +46,14 @@ class Residence:
         return list(STATUS_MAP.values())
 
     @status.setter
-    def status(self, value: str) -> None:
+    def status(self, value: Literal[Status.AWAY, Status.HOME]) -> None:
         if value not in STATUS_MAP.values():
             return
-        value = list(STATUS_MAP.keys())[list(STATUS_MAP.values()).index(value)]
+        json_value = list(STATUS_MAP.keys())[list(STATUS_MAP.values()).index(value)]
         self.api.call(
             method="put",
             url=f"residences/{self.id}",
-            json={"status": value},
+            json={"status": json_value},
         )
 
     @property
@@ -215,12 +215,12 @@ class Residence:
         )
 
     @property
-    def home_away_activity_map(self) -> dict[str, Any]:
+    def home_away_activity_map(self) -> dict[str | None, int | None]:
         """Home away activity map."""
         return {activity.name: activity.id for activity in self.activities}
 
     @property
-    def home_away_activity_options(self) -> list[str]:
+    def home_away_activity_options(self) -> list[str | None]:
         """Home away activity options."""
         ###        return [HOME_AWAY_ACTIVITY_DISABLED] + list(self.home_away_activity_map.keys())
         return [HOME_AWAY_ACTIVITY_DISABLED, *list(self.home_away_activity_map.keys())]
@@ -234,7 +234,7 @@ class Residence:
         return None
 
     @property
-    def home_activity(self) -> str:
+    def home_activity(self) -> str | None:
         """Home activity."""
         if self.home_activity_id:
             return list(self.home_away_activity_map.keys())[
@@ -273,7 +273,7 @@ class Residence:
         return None
 
     @property
-    def away_activity(self) -> str:
+    def away_activity(self) -> str | None:
         """Away activity."""
         if self.away_activity_id:
             return list(self.home_away_activity_map.keys())[

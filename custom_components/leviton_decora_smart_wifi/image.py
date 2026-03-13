@@ -19,20 +19,20 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonImageEntityDescription(ImageEntityDescription):
     """Class to describe a Leviton image entity."""
 
-    entity_category: str[EntityCategory] | None = EntityCategory.DIAGNOSTIC
+    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
     is_supported: Callable[[Any], bool] = lambda device: device.is_matter_capable
-    state: str | None = None
+    state_key: str | None = None
 
 
 IMAGE_DESCRIPTIONS: list[LevitonImageEntityDescription] = [
     LevitonImageEntityDescription(
         key="matter_qr_code",
         name="Matter Pairing Code",
-        state="matter_manual_code",
+        state_key="matter_manual_code",
     ),
 ]
 
@@ -77,6 +77,7 @@ class LevitonImageEntity(LevitonEntity, ImageEntity):
     """Representation of a Leviton image entity."""
 
     _attr_content_type = "image/png"
+    entity_description: LevitonImageEntityDescription
 
     def __init__(
         self,
@@ -117,6 +118,6 @@ class LevitonImageEntity(LevitonEntity, ImageEntity):
     @property
     def state(self) -> str | None:
         """Return the state."""
-        if self.entity_description.state:
-            return getattr(self.device, self.entity_description.state)
+        if self.entity_description.state_key is not None:
+            return getattr(self.device, self.entity_description.state_key)
         return super().state

@@ -18,26 +18,18 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LevitonEntity
-from .api.const import (
-    MAXIMUM_LEVEL,
-    MINIMUM_AMBIENT_THRESHOLD,
-    MINIMUM_LEVEL_FAN,
-    MINIMUM_LEVEL_LIGHT,
-    PRESET_LEVEL_OFF,
-    STEP_LEVEL_FAN,
-    STEP_LEVEL_LIGHT,
-)
+from .api.const import Level
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonNumberEntityDescription(NumberEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi number entity."""
 
-    entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
-    native_max_value: float = MAXIMUM_LEVEL
-    native_min_value: float = PRESET_LEVEL_OFF
-    native_step: float = STEP_LEVEL_LIGHT
+    entity_category: EntityCategory | None = EntityCategory.CONFIG
+    native_max_value: float = Level.MAXIMUM
+    native_min_value: float = Level.PRESET_OFF
+    native_step: float = Level.STEP_LIGHT
     is_supported: Callable[[Any], bool] = lambda device: device.can_set_level
 
 
@@ -46,7 +38,7 @@ NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
         key="min_level",
         name="Minimum Level",
         device_class=NumberDeviceClass.POWER_FACTOR,
-        native_min_value=MINIMUM_LEVEL_LIGHT,
+        native_min_value=Level.MINIMUM_LIGHT,
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:arrow-collapse-down",
     ),
@@ -54,7 +46,7 @@ NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
         key="max_level",
         name="Maximum Level",
         device_class=NumberDeviceClass.POWER_FACTOR,
-        native_min_value=MINIMUM_LEVEL_LIGHT,
+        native_min_value=Level.MINIMUM_LIGHT,
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:arrow-collapse-up",
     ),
@@ -62,7 +54,7 @@ NUMBER_DESCRIPTIONS: list[LevitonNumberEntityDescription] = [
         key="motion_ambient_threshold",
         name="Ambient Light Threshold",
         device_class=NumberDeviceClass.POWER_FACTOR,
-        native_min_value=MINIMUM_AMBIENT_THRESHOLD,
+        native_min_value=Level.MINIMUM_AMBIENT_THRESHOLD,
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:television-ambient-light",
         is_supported=lambda device: device.has_motion_sensor,
@@ -128,15 +120,15 @@ class LevitonNumberEntity(NumberEntity, LevitonEntity):
     @property
     def native_min_value(self) -> float:
         """Return the minimum value."""
-        if self.device.is_fan:
-            return MINIMUM_LEVEL_FAN
+        if self.device is not None and self.device.is_fan:
+            return Level.MINIMUM_FAN
         return self.entity_description.native_min_value
 
     @property
     def native_step(self) -> float | None:
         """Return the increment/decrement step."""
-        if self.device.is_fan:
-            return STEP_LEVEL_FAN
+        if self.device is not None and self.device.is_fan:
+            return Level.STEP_FAN
         return self.entity_description.native_step
 
     @property

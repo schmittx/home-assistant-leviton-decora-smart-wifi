@@ -6,7 +6,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.components.button import (
+    ButtonDeviceClass,
+    ButtonEntity,
+    ButtonEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -16,11 +20,11 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonButtonEntityDescription(ButtonEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi button entity."""
 
-    entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
+    entity_category: EntityCategory | None = EntityCategory.CONFIG
     is_supported: Callable[[Any], bool] = lambda device: True
 
 
@@ -28,6 +32,8 @@ BUTTON_DESCRIPTIONS: list[LevitonButtonEntityDescription] = [
     LevitonButtonEntityDescription(
         key="identify",
         name="Identify",
+        device_class=ButtonDeviceClass.IDENTIFY,
+        entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:flash",
     ),
     LevitonButtonEntityDescription(
@@ -59,7 +65,7 @@ async def async_setup_entry(
                     residence_id=residence.id,
                     activity_id=activity.id,
                     entity_description=LevitonButtonEntityDescription(
-                        key=None,
+                        key="activity",
                         name=None,
                     ),
                 )
@@ -74,7 +80,7 @@ async def async_setup_entry(
                             device_id=device.id,
                             button_id=button.id,
                             entity_description=LevitonButtonEntityDescription(
-                                key=None,
+                                key="button",
                                 name=None,
                             ),
                         )
@@ -107,9 +113,9 @@ class LevitonButtonEntity(ButtonEntity, LevitonEntity):
 
     def press(self) -> None:
         """Press the button."""
-        if self.activity:
+        if self.activity is not None:
             self.activity.execute()
-        elif self.button:
+        elif self.button is not None:
             self.button.press()
         else:
             getattr(self.device, self.entity_description.key)()

@@ -1,5 +1,7 @@
 """Constants used by the Leviton Decora Smart Wi-Fi integration."""
 
+from enum import IntEnum
+
 CONF_DEVICES: str = "devices"
 CONF_RESIDENCES: str = "residences"
 CONF_SAVE_RESPONSES: str = "save_responses"
@@ -18,16 +20,24 @@ UNDO_UPDATE_LISTENER: str = "undo_update_listener"
 
 DEFAULT_SAVE_LOCATION: str = f"/config/custom_components/{DOMAIN}/api/responses"
 DEFAULT_SAVE_RESPONSES: bool = False
-DEFAULT_SCAN_INTERVAL: int = 120
-DEFAULT_TIMEOUT: int = 30
 
 DEVICE_INFO_MANUFACTURER: str = "Leviton Manufacturing Co., Inc."
 DEVICE_INFO_MODEL_RESIDENCE: str = "Residence"
 
-MIN_SCAN_INTERVAL: int = 30
-MAX_SCAN_INTERVAL: int = 600
-STEP_SCAN_INTERVAL: int = 30
 
-MIN_TIMEOUT: int = 10
-MAX_TIMEOUT: int = 60
-STEP_TIMEOUT: int = 5
+class ScanInterval(IntEnum):
+    """Scan interval."""
+
+    DEFAULT = 120
+    MAX = 600
+    MIN = 30
+    STEP = 30
+
+
+class Timeout(IntEnum):
+    """Timeout."""
+
+    DEFAULT = 30
+    MAX = 60
+    MIN = 10
+    STEP = 5

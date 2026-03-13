@@ -23,7 +23,7 @@ class Schedule:
         return self.data.get("disabled")
 
     @property
-    def enabled(self) -> bool | None:
+    def enabled(self) -> bool:
         """Disabled."""
         return not bool(self.disabled)
 

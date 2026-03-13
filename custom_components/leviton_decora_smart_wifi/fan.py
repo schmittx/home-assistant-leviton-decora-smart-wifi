@@ -18,7 +18,7 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonFanEntityDescription(FanEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi fan entity."""
 
@@ -43,7 +43,7 @@ async def async_setup_entry(
                     residence_id=residence.id,
                     device_id=device.id,
                     entity_description=LevitonFanEntityDescription(
-                        key=None,
+                        key="fan",
                         name=None,
                     ),
                 )
@@ -67,23 +67,31 @@ class LevitonFanEntity(FanEntity, LevitonEntity):
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
-        return self.device.is_on
+        return self.device is not None and self.device.is_on
 
     @property
-    def percentage(self) -> int:
+    def percentage(self) -> int | None:
         """Return the current speed percentage."""
-        return self.device.brightness
+        if self.device is not None:
+            return self.device.brightness
+        return None
 
     @property
     def speed_count(self) -> int:
         """Return the number of speeds the fan supports."""
-        return int(self.device.max_level / self.device.min_level)
+        if (
+            self.device is not None
+            and self.device.max_level is not None
+            and self.device.min_level is not None
+        ):
+            return int(self.device.max_level / self.device.min_level)
+        return 100
 
     @property
     def supported_features(self) -> FanEntityFeature:
         """Flag supported features."""
         supported_features = FanEntityFeature.TURN_OFF | FanEntityFeature.TURN_ON
-        if self.device.can_set_level:
+        if self.device is not None and self.device.can_set_level:
             supported_features = supported_features | FanEntityFeature.SET_SPEED
         return supported_features
 
@@ -94,7 +102,8 @@ class LevitonFanEntity(FanEntity, LevitonEntity):
         **kwargs: Any,
     ) -> None:
         """Turn the entity on."""
-        self.device.turn_on()
+        if self.device is not None:
+            self.device.turn_on()
 
     async def async_turn_on(
         self,
@@ -108,7 +117,8 @@ class LevitonFanEntity(FanEntity, LevitonEntity):
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        self.device.turn_off()
+        if self.device is not None:
+            self.device.turn_off()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
@@ -117,7 +127,8 @@ class LevitonFanEntity(FanEntity, LevitonEntity):
 
     def set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
-        self.device.set_speed(percentage)
+        if self.device is not None:
+            self.device.set_speed(percentage)
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed percentage of the fan."""

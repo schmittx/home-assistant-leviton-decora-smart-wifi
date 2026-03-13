@@ -1,6 +1,7 @@
 """Adds config flow for Leviton Decora Smart Wi-Fi integration."""
 
 import logging
+from types import MappingProxyType
 from typing import Any
 
 import voluptuous as vol
@@ -30,6 +31,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import LOGIN_CODE_REQUIRED, LOGIN_SUCCESS, LevitonAPI, LevitonException
+from .api.residence import Residence as LevitonResidence
 from .const import (
     CONF_DEVICES,
     CONF_RESIDENCES,
@@ -37,15 +39,9 @@ from .const import (
     CONF_TIMEOUT,
     DATA_API,
     DEFAULT_SAVE_RESPONSES,
-    DEFAULT_SCAN_INTERVAL,
-    DEFAULT_TIMEOUT,
     DOMAIN,
-    MAX_SCAN_INTERVAL,
-    MAX_TIMEOUT,
-    MIN_SCAN_INTERVAL,
-    MIN_TIMEOUT,
-    STEP_SCAN_INTERVAL,
-    STEP_TIMEOUT,
+    ScanInterval,
+    Timeout,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,10 +55,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize."""
-        self.api = None
+        self.api: LevitonAPI = LevitonAPI()
         self.index = 0
-        self.response = None
-        self.user_input = {}
+        self.response: list[LevitonResidence] = []
+        self.user_input: dict[str, Any] = {}
 
     @property
     def config_title(self) -> str:
@@ -226,7 +222,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         for residence in self.response:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
                 device_names = [
-                    device.name for device in residence.devices if device.is_supported
+                    device.name
+                    for device in residence.devices
+                    if device.is_supported and device.name
                 ]
 
         if not device_names:
@@ -269,20 +267,20 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_SAVE_RESPONSES, default=DEFAULT_SAVE_RESPONSES
                     ): BooleanSelector(),
                     vol.Optional(
-                        CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+                        CONF_SCAN_INTERVAL, default=ScanInterval.DEFAULT
                     ): NumberSelector(
                         NumberSelectorConfig(
-                            min=MIN_SCAN_INTERVAL,
-                            max=MAX_SCAN_INTERVAL,
-                            step=STEP_SCAN_INTERVAL,
+                            min=ScanInterval.MIN,
+                            max=ScanInterval.MAX,
+                            step=ScanInterval.STEP,
                             unit_of_measurement=UnitOfTime.SECONDS,
                         )
                     ),
-                    vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): NumberSelector(
+                    vol.Optional(CONF_TIMEOUT, default=Timeout.DEFAULT): NumberSelector(
                         NumberSelectorConfig(
-                            min=MIN_TIMEOUT,
-                            max=MAX_TIMEOUT,
-                            step=STEP_TIMEOUT,
+                            min=Timeout.MIN,
+                            max=Timeout.MAX,
+                            step=Timeout.STEP,
                             unit_of_measurement=UnitOfTime.SECONDS,
                         )
                     ),
@@ -292,7 +290,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
         """Leviton Decora Smart Wi-Fi options callback."""
         return LevitonOptionsFlowHandler()
 
@@ -302,19 +302,18 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self) -> None:
         """Initialize Leviton Decora Smart Wi-Fi options flow."""
-        self.api = None
-        #        self.coordinator = None
+        self.api = LevitonAPI()
         self.index = 0
-        self.response = None
+        self.response = []
         self.user_input = {}
 
     @property
-    def data(self) -> dict[str, Any]:
+    def data(self) -> MappingProxyType[str, Any]:
         """Return the data from a config entry."""
         return self.config_entry.data
 
     @property
-    def options(self) -> dict[str, Any]:
+    def options(self) -> MappingProxyType[str, Any]:
         """Return the options from a config entry."""
         return self.config_entry.options
 
@@ -427,10 +426,10 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
             self.data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES),
         )
         conf_scan_interval = self.options.get(
-            CONF_SCAN_INTERVAL, self.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            CONF_SCAN_INTERVAL, self.data.get(CONF_SCAN_INTERVAL, ScanInterval.DEFAULT)
         )
         conf_timeout = self.options.get(
-            CONF_TIMEOUT, self.data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
+            CONF_TIMEOUT, self.data.get(CONF_TIMEOUT, Timeout.DEFAULT)
         )
 
         return self.async_show_form(
@@ -444,17 +443,17 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_SCAN_INTERVAL, default=conf_scan_interval
                     ): NumberSelector(
                         NumberSelectorConfig(
-                            min=MIN_SCAN_INTERVAL,
-                            max=MAX_SCAN_INTERVAL,
-                            step=STEP_SCAN_INTERVAL,
+                            min=ScanInterval.MIN,
+                            max=ScanInterval.MAX,
+                            step=ScanInterval.STEP,
                             unit_of_measurement=UnitOfTime.SECONDS,
                         )
                     ),
                     vol.Optional(CONF_TIMEOUT, default=conf_timeout): NumberSelector(
                         NumberSelectorConfig(
-                            min=MIN_TIMEOUT,
-                            max=MAX_TIMEOUT,
-                            step=STEP_TIMEOUT,
+                            min=Timeout.MIN,
+                            max=Timeout.MAX,
+                            step=Timeout.STEP,
                             unit_of_measurement=UnitOfTime.SECONDS,
                         )
                     ),

@@ -21,15 +21,15 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from . import LevitonEntity
-from .api.const import GFCI_STATUS_OPTIONS
+from .api.const import GFCIStatus
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonSensorEntityDescription(SensorEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi sensor entity."""
 
-    entity_category: str[EntityCategory] | None = EntityCategory.DIAGNOSTIC
+    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
     is_supported: Callable[[Any], bool] = lambda device: True
     translation_key: str | None = "all"
 
@@ -39,7 +39,7 @@ SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
         key="fault_status",
         name="Fault Status",
         device_class=SensorDeviceClass.ENUM,
-        options=GFCI_STATUS_OPTIONS,
+        options=[status.value for status in GFCIStatus],
         icon="mdi:lightning-bolt-circle",
         is_supported=lambda device: device.is_gfci,
     ),

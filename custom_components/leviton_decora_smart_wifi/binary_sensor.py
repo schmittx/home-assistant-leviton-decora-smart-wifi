@@ -19,7 +19,7 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi binary sensor entity."""
 

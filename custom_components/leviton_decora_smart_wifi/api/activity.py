@@ -1,4 +1,4 @@
-"""Leviton AP."""
+"""Leviton API."""
 
 from __future__ import annotations
 

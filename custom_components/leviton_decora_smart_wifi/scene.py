@@ -15,7 +15,7 @@ from . import LevitonEntity
 from .const import CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonSceneEntityDescription(EntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi scene entity."""
 
@@ -41,7 +41,7 @@ async def async_setup_entry(
                         room_id=room.id,
                         scene_id=scene.id,
                         entity_description=LevitonSceneEntityDescription(
-                            key=None,
+                            key="scene",
                             entity_category=EntityCategory.CONFIG,
                             name=None,
                         ),
@@ -59,7 +59,8 @@ class LevitonSceneEntity(Scene, LevitonEntity):
 
     def activate(self, **kwargs: Any) -> None:
         """Activate scene. Try to get entities into requested state."""
-        self.scene.execute()
+        if self.scene is not None:
+            self.scene.execute()
 
     async def async_activate(self, **kwargs: Any) -> None:
         """Activate scene. Try to get entities into requested state."""

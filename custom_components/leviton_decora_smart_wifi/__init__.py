@@ -41,12 +41,12 @@ from .const import (
     DATA_COORDINATOR,
     DEFAULT_SAVE_LOCATION,
     DEFAULT_SAVE_RESPONSES,
-    DEFAULT_SCAN_INTERVAL,
-    DEFAULT_TIMEOUT,
     DEVICE_INFO_MANUFACTURER,
     DEVICE_INFO_MODEL_RESIDENCE,
     DOMAIN,
     UNDO_UPDATE_LISTENER,
+    ScanInterval,
+    Timeout,
 )
 
 PLATFORMS = (
@@ -95,9 +95,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         CONF_SAVE_RESPONSES, data.get(CONF_SAVE_RESPONSES, DEFAULT_SAVE_RESPONSES)
     )
     conf_scan_interval = options.get(
-        CONF_SCAN_INTERVAL, data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        CONF_SCAN_INTERVAL, data.get(CONF_SCAN_INTERVAL, ScanInterval.DEFAULT)
     )
-    conf_timeout = options.get(CONF_TIMEOUT, data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT))
+    conf_timeout = options.get(CONF_TIMEOUT, data.get(CONF_TIMEOUT, Timeout.DEFAULT))
 
     conf_save_location = DEFAULT_SAVE_LOCATION if conf_save_responses else None
 
@@ -107,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         authorization=data[CONF_TOKEN],
     )
 
-    async def async_update_data():
+    async def async_update_data() -> list[LevitonResidence]:
         """Fetch data from API endpoint.
 
         This is the place to pre-process the data to lookup tables
@@ -118,19 +118,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 return await hass.async_add_executor_job(api.update, conf_residences)
         except LevitonException as exception:
             raise UpdateFailed(
-                "Error communicating with API, Status: {}, Error Name: {}, Error Message: {}"
-            ).format(
-                exception.status_code,
-                exception.name,
-                exception.message,
-            ) from LevitonException
+                f"Error communicating with API, Status: {exception.status_code}, Error Name: {exception.name}, Error Message: {exception.message}"
+            ) from exception
 
     coordinator = DataUpdateCoordinator(
         hass=hass,
         logger=_LOGGER,
+        config_entry=config_entry,
         name=f"Leviton Decora Smart Wi-Fi ({data[CONF_NAME]})",
-        update_method=async_update_data,
         update_interval=timedelta(seconds=conf_scan_interval),
+        update_method=async_update_data,
     )
     await coordinator.async_refresh()
 
@@ -140,7 +137,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 config_entry_id=config_entry.entry_id,
                 configuration_url=CONFIGURATION_URL,
                 entry_type=dr.DeviceEntryType.SERVICE,
-                identifiers={(DOMAIN, residence.id)},
+                identifiers={(DOMAIN, str(residence.id))},
                 manufacturer=DEVICE_INFO_MANUFACTURER,
                 model=DEVICE_INFO_MODEL_RESIDENCE,
                 name=residence.name,
@@ -191,7 +188,7 @@ class LevitonEntity(CoordinatorEntity):
         scene_id: int | None = None,
         device_id: int | None = None,
         button_id: int | None = None,
-        entity_description: EntityDescription = None,
+        entity_description: EntityDescription | None = None,
     ) -> None:
         """Initialize the device."""
         super().__init__(coordinator)
@@ -202,31 +199,41 @@ class LevitonEntity(CoordinatorEntity):
         self.scene_id = scene_id
         self.device_id = device_id
         self.button_id = button_id
-        self.entity_description = entity_description
+        if entity_description:
+            self.entity_description = entity_description
 
     @property
     def residence(self) -> LevitonResidence | None:
         """Return a LevitonResidence object."""
-        residences = {residence.id: residence for residence in self.coordinator.data}
+        data: list[LevitonResidence] = self.coordinator.data  # pyright: ignore[reportAssignmentType]
+        residences = {residence.id: residence for residence in data}
         return residences.get(self.residence_id)
 
     @property
     def activity(self) -> LevitonActivity | None:
         """Return a LevitonActivity object."""
-        activities = {activity.id: activity for activity in self.residence.activities}
-        return activities.get(self.activity_id)
+        if self.residence:
+            activities = {
+                activity.id: activity for activity in self.residence.activities
+            }
+            return activities.get(self.activity_id)
+        return None
 
     @property
     def schedule(self) -> LevitonSchedule | None:
         """Return a LevitonSchedule object."""
-        schedules = {schedule.id: schedule for schedule in self.residence.schedules}
-        return schedules.get(self.schedule_id)
+        if self.residence:
+            schedules = {schedule.id: schedule for schedule in self.residence.schedules}
+            return schedules.get(self.schedule_id)
+        return None
 
     @property
     def room(self) -> LevitonRoom | None:
         """Return a LevitonRoom object."""
-        rooms = {room.id: room for room in self.residence.rooms}
-        return rooms.get(self.room_id)
+        if self.residence:
+            rooms = {room.id: room for room in self.residence.rooms}
+            return rooms.get(self.room_id)
+        return None
 
     @property
     def scene(self) -> LevitonScene | None:
@@ -239,8 +246,10 @@ class LevitonEntity(CoordinatorEntity):
     @property
     def device(self) -> LevitonDevice | None:
         """Return a LevitonDevice object."""
-        devices = {device.id: device for device in self.residence.devices}
-        return devices.get(self.device_id)
+        if self.residence:
+            devices = {device.id: device for device in self.residence.devices}
+            return devices.get(self.device_id)
+        return None
 
     @property
     def button(self) -> LevitonButton | None:
@@ -292,36 +301,38 @@ class LevitonEntity(CoordinatorEntity):
         return available
 
     @property
-    def device_info(self) -> dr.DeviceInfo:
+    def device_info(self) -> dr.DeviceInfo | None:
         """Return device specific attributes.
 
         Implemented by platform classes.
         """
-        if self.device:
+        if self.residence and self.residence.id:
+            if self.device and self.device.id:
+                return dr.DeviceInfo(
+                    configuration_url=CONFIGURATION_URL,
+                    identifiers={(DOMAIN, str(self.device.id))},
+                    manufacturer=self.device.manufacturer,
+                    model=self.device.model,
+                    name=self.device.name,
+                    serial_number=self.device.serial,
+                    suggested_area=self.device.room_name,
+                    sw_version=self.device.version,
+                    via_device=(DOMAIN, str(self.residence.id)),
+                )
             return dr.DeviceInfo(
                 configuration_url=CONFIGURATION_URL,
-                hw_version=self.device.serial,
-                identifiers={(DOMAIN, self.device.id)},
-                manufacturer=self.device.manufacturer,
-                model=self.device.model,
-                name=self.device.name,
-                suggested_area=self.device.room_name,
-                sw_version=self.device.version,
-                via_device=(DOMAIN, self.residence.id),
+                entry_type=dr.DeviceEntryType.SERVICE,
+                identifiers={(DOMAIN, str(self.residence.id))},
+                manufacturer=DEVICE_INFO_MANUFACTURER,
+                model=DEVICE_INFO_MODEL_RESIDENCE,
+                name=self.residence.name,
             )
-        return dr.DeviceInfo(
-            configuration_url=CONFIGURATION_URL,
-            entry_type=dr.DeviceEntryType.SERVICE,
-            identifiers={(DOMAIN, self.residence.id)},
-            manufacturer=DEVICE_INFO_MANUFACTURER,
-            model=DEVICE_INFO_MODEL_RESIDENCE,
-            name=self.residence.name,
-        )
+        return None
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         """Return the name of the entity."""
-        name = self.residence.name
+        name = self.residence.name if self.residence else None
         if self.device:
             name = self.device.name
         if self.activity:
@@ -337,16 +348,16 @@ class LevitonEntity(CoordinatorEntity):
         return name
 
     @property
-    def unique_id(self) -> str:
+    def unique_id(self) -> str | int | None:
         """Return a unique ID."""
-        unique_id = self.residence.id
+        unique_id = self.residence.id if self.residence else None
         if self.device:
             unique_id = self.device.mac
         if self.activity:
             return f"{unique_id}-{self.activity.id}"
         if self.schedule:
             return f"{unique_id}-{self.schedule.id}"
-        if self.scene:
+        if self.scene and self.room:
             return f"{unique_id}-{self.room.id}-{self.scene.id}"
         if self.button:
             return f"{unique_id}-{self.button.id}"

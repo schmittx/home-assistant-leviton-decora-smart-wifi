@@ -20,11 +20,11 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonSwitchEntityDescription(SwitchEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi switch entity."""
 
-    entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
+    entity_category: EntityCategory | None = EntityCategory.CONFIG
     is_supported: Callable[[Any], bool] = lambda device: device.has_motion_sensor
 
 
@@ -103,7 +103,7 @@ async def async_setup_entry(
                     residence_id=residence.id,
                     schedule_id=schedule.id,
                     entity_description=LevitonSwitchEntityDescription(
-                        key=None,
+                        key="schedule",
                         name=None,
                         icon="mdi:calendar-clock",
                     ),
@@ -125,7 +125,7 @@ async def async_setup_entry(
                                 device_id=device.id,
                                 entity_description=LevitonSwitchEntityDescription(
                                     entity_category=None,
-                                    key=None,
+                                    key="switch",
                                     name=None,
                                 ),
                             )
@@ -157,7 +157,7 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
     @property
     def device_class(self) -> SwitchDeviceClass | str | None:
         """Return the class of this device, from component DEVICE_CLASSES."""
-        if self.device:
+        if self.device is not None:
             if self.device.is_outlet:
                 return SwitchDeviceClass.OUTLET
             return SwitchDeviceClass.SWITCH
@@ -166,19 +166,19 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
-        if self.schedule:
+        if self.schedule is not None:
             return self.schedule.enabled
-        if key := self.entity_description.key:
+        if (key := self.entity_description.key) and key != "switch":
             return getattr(self.target, key)
-        return self.device.is_on
+        return self.device is not None and self.device.is_on
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        if self.schedule:
+        if self.schedule is not None:
             self.schedule.enable()
-        elif key := self.entity_description.key:
+        elif (key := self.entity_description.key) and key != "switch":
             setattr(self.target, key, True)
-        else:
+        elif self.device is not None:
             self.device.turn_on()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -188,11 +188,11 @@ class LevitonSwitchEntity(SwitchEntity, LevitonEntity):
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        if self.schedule:
+        if self.schedule is not None:
             self.schedule.disable()
-        elif key := self.entity_description.key:
+        elif (key := self.entity_description.key) and key != "switch":
             setattr(self.target, key, False)
-        else:
+        elif self.device is not None:
             self.device.turn_off()
 
     async def async_turn_off(self, **kwargs: Any) -> None:

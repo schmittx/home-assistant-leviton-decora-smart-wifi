@@ -20,12 +20,12 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN, RELEASE_URL
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonUpdateEntityDescription(UpdateEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi update entity."""
 
     device_class: UpdateDeviceClass | None = UpdateDeviceClass.FIRMWARE
-    entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
+    entity_category: EntityCategory | None = EntityCategory.CONFIG
 
 
 async def async_setup_entry(
@@ -67,17 +67,21 @@ class LevitonUpdateEntity(UpdateEntity, LevitonEntity):
     @property
     def installed_version(self) -> str | None:
         """Version installed and in use."""
-        return self.device.version
+        if self.device is not None:
+            return self.device.version
+        return None
 
     @property
     def latest_version(self) -> str | None:
         """Latest version available for install."""
-        return self.device.update_version
+        if self.device is not None:
+            return self.device.update_version
+        return None
 
     @property
     def release_url(self) -> str | None:
         """URL to the full release notes of the latest version available."""
-        if self.device.is_second_generation:
+        if self.device is not None and self.device.is_generation_two:
             return RELEASE_URL
         return None
 
@@ -95,4 +99,5 @@ class LevitonUpdateEntity(UpdateEntity, LevitonEntity):
         The backup parameter indicates a backup should be taken before
         installing the update.
         """
-        self.device.apply_update()
+        if self.device is not None:
+            self.device.apply_update()

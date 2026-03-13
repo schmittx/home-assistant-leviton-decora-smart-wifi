@@ -16,11 +16,12 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonSelectEntityDescription(SelectEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi select entity."""
 
-    entity_category: str[EntityCategory] | None = EntityCategory.CONFIG
+    options_key: str | None = None
+    entity_category: EntityCategory | None = EntityCategory.CONFIG
     is_supported: Callable[[Any], bool] = lambda device: (
         device.can_set_level and device.is_light
     )
@@ -31,98 +32,98 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
     LevitonSelectEntityDescription(
         key="auto_shutoff",
         name="Auto Shutoff",
-        options="auto_shutoff_options",
+        options_key="auto_shutoff_options",
         icon="mdi:timer",
         is_supported=lambda device: not device.has_motion_sensor and not device.is_gfci,
     ),
     LevitonSelectEntityDescription(
         key="away_activity",
         name="Away Activity",
-        options="home_away_activity_options",
+        options_key="home_away_activity_options",
         icon="mdi:home-export-outline",
     ),
     LevitonSelectEntityDescription(
         key="bulb_type",
         name="Bulb Type",
-        options="bulb_type_options",
+        options_key="bulb_type_options",
         icon="mdi:lightbulb-cfl",
     ),
     LevitonSelectEntityDescription(
         key="control_timing",
         name="Control Timing",
-        options="control_timing_options",
+        options_key="control_timing_options",
         icon="mdi:tune",
     ),
     LevitonSelectEntityDescription(
         key="dimming_mode",
         name="Dimming Mode",
-        options="dimming_mode_options",
+        options_key="dimming_mode_options",
         icon="mdi:sine-wave",
         is_supported=lambda device: device.is_elv_capable,
     ),
     LevitonSelectEntityDescription(
         key="fade_off_rate",
         name="Fade Off Rate",
-        options="fade_on_off_rate_options",
+        options_key="fade_on_off_rate_options",
         icon="mdi:network-strength-1",
     ),
     LevitonSelectEntityDescription(
         key="fade_on_rate",
         name="Fade On Rate",
-        options="fade_on_off_rate_options",
+        options_key="fade_on_off_rate_options",
         icon="mdi:network-strength-3",
     ),
     LevitonSelectEntityDescription(
         key="home_activity",
         name="Home Activity",
-        options="home_away_activity_options",
+        options_key="home_away_activity_options",
         icon="mdi:home-import-outline",
     ),
     LevitonSelectEntityDescription(
         key="led_bar_behavior",
         name="LED Bar Behavior",
-        options="led_bar_behavior_options",
+        options_key="led_bar_behavior_options",
         icon="mdi:dots-vertical",
         is_supported=lambda device: device.has_led_bar,
     ),
     LevitonSelectEntityDescription(
         key="motion_mode",
         name="Motion Mode",
-        options="motion_mode_options",
+        options_key="motion_mode_options",
         icon="mdi:exit-run",
         is_supported=lambda device: device.has_motion_sensor,
     ),
     LevitonSelectEntityDescription(
         key="motion_night_mode",
         name="Motion Night Mode",
-        options="motion_night_mode_options",
+        options_key="motion_night_mode_options",
         icon="mdi:lightbulb-night",
         is_supported=lambda device: device.has_motion_sensor,
     ),
     LevitonSelectEntityDescription(
         key="motion_snooze",
         name="Motion Snooze",
-        options="motion_snooze_options",
+        options_key="motion_snooze_options",
         icon="mdi:alarm-snooze",
         is_supported=lambda device: device.has_motion_sensor,
     ),
     LevitonSelectEntityDescription(
         key="motion_timeout",
         name="Motion Timeout",
-        options="motion_timeout_options",
+        options_key="motion_timeout_options",
         icon="mdi:timer",
         is_supported=lambda device: device.has_motion_sensor,
     ),
     LevitonSelectEntityDescription(
         key="status",
         name="Status",
-        options="status_options",
+        options_key="status_options",
         icon="mdi:home-switch-outline",
     ),
     LevitonSelectEntityDescription(
         key="status_led_behavior",
         name="Status LED Behavior",
-        options="status_led_behavior_options",
+        options_key="status_led_behavior_options",
         icon="mdi:led-on",
         is_supported=lambda device: not device.is_controller and not device.is_gfci,
     ),
@@ -182,7 +183,9 @@ class LevitonSelectEntity(SelectEntity, LevitonEntity):
     @property
     def options(self) -> list[str]:
         """Return a set of selectable options."""
-        return getattr(self.target, self.entity_description.options)
+        if self.entity_description.options_key is not None:
+            return getattr(self.target, self.entity_description.options_key)
+        return []
 
     @property
     def current_option(self) -> str | None:

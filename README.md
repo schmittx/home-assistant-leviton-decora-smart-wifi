@@ -9,7 +9,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - Support for two-factor authentication.
 
 ## Install
-1. Ensure Home Assistant is updated to version 2025.3.0 or newer.
+1. Ensure Home Assistant is updated to version 2026.3.0 or newer.
 2. Use HACS and add as a [custom repo](https://hacs.xyz/docs/faq/custom_repositories); or download and manually move to the `custom_components` folder.
 3. Once the integration is installed follow the standard process to setup via UI and search for `Leviton Decora Smart Wi-Fi`.
 4. Follow the prompts.
@@ -52,6 +52,6 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - DW15S
 
 ## Future Plans
-- Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with async and websockets).
+- Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with websockets).
 - Control of night settings start/end time
 - Support for D2GF2, DN15S, DN6HD, MLWSB

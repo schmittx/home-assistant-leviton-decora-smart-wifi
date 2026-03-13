@@ -19,7 +19,7 @@ from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
 
 
-@dataclass
+@dataclass(frozen=True)
 class LevitonLightEntityDescription(LightEntityDescription):
     """Class to describe a Leviton Decora Smart Wi-Fi light entity."""
 
@@ -44,7 +44,7 @@ async def async_setup_entry(
                     residence_id=residence.id,
                     device_id=device.id,
                     entity_description=LevitonLightEntityDescription(
-                        key=None,
+                        key="light",
                         name=None,
                     ),
                 )
@@ -68,33 +68,36 @@ class LevitonLightEntity(LightEntity, LevitonEntity):
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
-        return self.device.is_on
+        return self.device is not None and self.device.is_on
 
     @property
-    def brightness(self) -> int:
+    def brightness(self) -> int | None:
         """Return the brightness of this light between 0..255."""
-        return int(self.device.brightness * 255 / 100)
+        if self.device is not None and self.device.brightness is not None:
+            return int(self.device.brightness * 255 / 100)
+        return None
 
     @property
     def color_mode(self) -> ColorMode:
         """Return the color mode of the light."""
-        if self.device.can_set_level:
+        if self.device is not None and self.device.can_set_level:
             return ColorMode.BRIGHTNESS
         return ColorMode.ONOFF
 
     @property
     def supported_color_modes(self) -> set[ColorMode]:
         """Flag supported color modes."""
-        if self.device.can_set_level:
+        if self.device is not None and self.device.can_set_level:
             return {ColorMode.BRIGHTNESS}
         return {ColorMode.ONOFF}
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        if ATTR_BRIGHTNESS in kwargs:
-            self.device.set_brightness(int(kwargs[ATTR_BRIGHTNESS] * 100 / 255))
-        else:
-            self.device.turn_on()
+        if self.device is not None:
+            if ATTR_BRIGHTNESS in kwargs:
+                self.device.set_brightness(int(kwargs[ATTR_BRIGHTNESS] * 100 / 255))
+            else:
+                self.device.turn_on()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
@@ -103,7 +106,8 @@ class LevitonLightEntity(LightEntity, LevitonEntity):
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        self.device.turn_off()
+        if self.device is not None:
+            self.device.turn_off()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
