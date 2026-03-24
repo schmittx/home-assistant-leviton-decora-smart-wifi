@@ -19,6 +19,8 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - If `Advanced Mode` is enabled for the current profile, additional options are available (interval, timeout, and response logging).
 
 ## Supported Devices
+### Bridges
+- MLWSB
 ### Controllers
 - D2SCS
 - DW4BC
@@ -33,6 +35,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - D26HD
 - D2ELV
 - D2MSD
+- DN6HD
 - DW1KD
 - DW3HL
 - DW6HD
@@ -49,9 +52,9 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - D215O
 - D215S
 - D2SCS
+- DN15S
 - DW15S
 
 ## Future Plans
 - Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with websockets).
 - Control of night settings start/end time
-- Support for D2GF2, DN15S, DN6HD, MLWSB
