@@ -58,17 +58,19 @@ class DeviceSupportTest(unittest.TestCase):
     def test_new_models_have_expected_primary_types(self):
         self.assertTrue(make_device("DN15S").is_switch)
         self.assertTrue(make_device("DN6HD", canSetLevel=True).is_light)
-        self.assertTrue(make_device("MLWSB").is_bridge)
+        self.assertFalse(make_device("MLWSB").is_supported)
 
     def test_gfci_and_bridge_are_not_primary_switches(self):
         self.assertFalse(make_device("D2GF2").is_switch)
         self.assertFalse(make_device("MLWSB").is_switch)
 
-    def test_bridge_is_diagnostic_only_for_load_configuration(self):
-        bridge = make_device("MLWSB")
-        dimmer = make_device("DN6HD", canSetLevel=True)
+    def test_dn_devices_surface_bridge_linkage_metadata(self):
+        switch = make_device("DN15S", iotBridgeSerial="1000_003F_F15A")
+        dimmer = make_device("DN6HD", canSetLevel=True, iotBridgeSerial="1000_003F_F15A")
 
-        self.assertFalse(bridge.supports_auto_shutoff)
-        self.assertFalse(bridge.supports_status_led_behavior)
+        self.assertEqual(switch.bridge_serial, "1000_003F_F15A")
+        self.assertTrue(switch.has_bridge)
+        self.assertEqual(dimmer.bridge_serial, "1000_003F_F15A")
+        self.assertTrue(dimmer.has_bridge)
         self.assertTrue(dimmer.supports_auto_shutoff)
         self.assertTrue(dimmer.supports_status_led_behavior)

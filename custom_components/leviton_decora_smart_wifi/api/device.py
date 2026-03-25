@@ -20,7 +20,6 @@ from .const import (
     MOTION_NIGHT_MODE_MAP,
     MOTION_SNOOZE_MAP,
     MOTION_TIMEOUT_MAP,
-    SUPPORTED_DEVICES_BRIDGE,
     STATUS_LED_MODE_MAP,
     SUPPORTED_DEVICES_CONTROLLER,
     SUPPORTED_DEVICES_FAN,
@@ -217,6 +216,21 @@ class Device:
         return self.data.get("localIP")
 
     @property
+    def bridge_id(self) -> int | None:
+        """Bridge ID."""
+        return self.data.get("iotBridgeId")
+
+    @property
+    def bridge_serial(self) -> str | None:
+        """Bridge serial."""
+        return self.data.get("iotBridgeSerial")
+
+    @property
+    def has_bridge(self) -> bool:
+        """Has bridge."""
+        return bool(self.bridge_id or self.bridge_serial)
+
+    @property
     def created(self) -> str | None:
         """Created."""
         return self.data.get("created")
@@ -289,7 +303,7 @@ class Device:
     @property
     def supports_status_led_behavior(self) -> bool:
         """Supports status LED behavior configuration."""
-        return not self.is_bridge and not self.is_controller and not self.is_gfci
+        return not self.is_controller and not self.is_gfci
 
     @status_led_behavior.setter
     def status_led_behavior(self, value: str) -> None:
@@ -524,7 +538,7 @@ class Device:
     @property
     def supports_auto_shutoff(self) -> bool:
         """Supports auto shutoff configuration."""
-        return not self.is_bridge and not self.has_motion_sensor and not self.is_gfci
+        return not self.has_motion_sensor and not self.is_gfci
 
     @auto_shutoff.setter
     def auto_shutoff(self, value: str) -> None:
@@ -979,11 +993,6 @@ class Device:
     def is_supported(self) -> bool:
         """Is supported."""
         return bool(self.model in SUPPORTED_DEVICES_MODEL)
-
-    @property
-    def is_bridge(self) -> bool:
-        """Is bridge."""
-        return bool(self.model in SUPPORTED_DEVICES_BRIDGE)
 
     @property
     def is_controller(self) -> bool:

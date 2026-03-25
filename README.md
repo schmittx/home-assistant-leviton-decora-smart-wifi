@@ -19,8 +19,6 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - If `Advanced Mode` is enabled for the current profile, additional options are available (interval, timeout, and response logging).
 
 ## Supported Devices
-### Bridges
-- MLWSB
 ### Controllers
 - D2SCS
 - DW4BC
@@ -58,3 +56,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 ## Future Plans
 - Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with websockets).
 - Control of night settings start/end time
+
+## Notes
+- `DN15S` and `DN6HD` devices may report bridge linkage through diagnostic data such as `Bridge Serial`.
+- The required `MLWSB` bridge is not currently exposed by the My Leviton cloud device list as a standalone selectable device, so it is not added as its own Home Assistant device by this integration.
