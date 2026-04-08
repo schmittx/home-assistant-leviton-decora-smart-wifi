@@ -23,10 +23,11 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .api import LevitonAPI, LevitonException
+from .api import LevitonAPI, LevitonData, LevitonException
 from .api.activity import Activity as LevitonActivity
 from .api.button import Button as LevitonButton
 from .api.device import Device as LevitonDevice
+from .api.firmware import Firmware as LevitonFirmware
 from .api.residence import Residence as LevitonResidence
 from .api.room import Room as LevitonRoom
 from .api.scene import Scene as LevitonScene
@@ -107,7 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         authorization=data[CONF_TOKEN],
     )
 
-    async def async_update_data() -> list[LevitonResidence]:
+    async def async_update_data() -> LevitonData:
         """Fetch data from API endpoint.
 
         This is the place to pre-process the data to lookup tables
@@ -131,7 +132,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
     await coordinator.async_refresh()
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             device_registry.async_get_or_create(
                 config_entry_id=config_entry.entry_id,
@@ -205,9 +206,22 @@ class LevitonEntity(CoordinatorEntity):
     @property
     def residence(self) -> LevitonResidence | None:
         """Return a LevitonResidence object."""
-        data: list[LevitonResidence] = self.coordinator.data  # pyright: ignore[reportAssignmentType]
-        residences = {residence.id: residence for residence in data}
+        residences = {
+            residence.id: residence
+            for residence in self.coordinator.data.residences  # pyright: ignore[reportAttributeAccessIssue]
+        }
         return residences.get(self.residence_id)
+
+    @property
+    def firmware(self) -> LevitonFirmware | None:
+        """Return a LevitonFirmware object."""
+        if self.device:
+            firmware = {
+                firmware.model: firmware
+                for firmware in self.coordinator.data.firmware  # pyright: ignore[reportAttributeAccessIssue]
+            }
+            return firmware.get(self.device.model)
+        return None
 
     @property
     def activity(self) -> LevitonActivity | None:

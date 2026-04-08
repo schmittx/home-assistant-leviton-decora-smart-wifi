@@ -60,10 +60,9 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         key="random_enabled",
         name="Randomization",
         icon="mdi:shuffle",
-        is_supported=lambda device: device.is_fan
-        or device.is_light
-        or device.is_outlet
-        or device.is_switch,
+        is_supported=lambda device: (
+            device.is_fan or device.is_light or device.is_outlet or device.is_switch
+        ),
     ),
     LevitonSwitchEntityDescription(
         key="status_led_enabled",
@@ -86,7 +85,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonSwitchEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             entities.extend(
                 LevitonSwitchEntity(

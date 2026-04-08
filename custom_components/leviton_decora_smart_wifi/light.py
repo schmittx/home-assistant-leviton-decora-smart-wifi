@@ -36,7 +36,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonLightEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             entities.extend(
                 LevitonLightEntity(

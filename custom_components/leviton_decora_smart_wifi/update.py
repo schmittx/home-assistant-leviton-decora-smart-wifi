@@ -40,7 +40,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonUpdateEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             entities.extend(
                 LevitonUpdateEntity(
@@ -77,6 +77,27 @@ class LevitonUpdateEntity(UpdateEntity, LevitonEntity):
         if self.device is not None:
             return self.device.update_version
         return None
+
+    @property
+    def release_summary(self) -> str | None:
+        """Summary of the release notes or changelog.
+
+        This is not suitable for long changelogs, but merely suitable
+        for a short excerpt update description of max 255 characters.
+        """
+        if self.firmware is not None and self.latest_version == self.firmware.version:
+            return (
+                self.firmware.notes.replace("~", "-") if self.firmware.notes else None
+            )
+        return None
+
+    def release_notes(self) -> str | None:
+        """Return full release notes.
+
+        This is suitable for a long changelog that does not fit in the release_summary property.
+        The returned string can contain markdown.
+        """
+        return self.release_summary
 
     @property
     def release_url(self) -> str | None:

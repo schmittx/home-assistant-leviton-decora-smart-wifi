@@ -30,8 +30,13 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .api import LOGIN_CODE_REQUIRED, LOGIN_SUCCESS, LevitonAPI, LevitonException
-from .api.residence import Residence as LevitonResidence
+from .api import (
+    LOGIN_CODE_REQUIRED,
+    LOGIN_SUCCESS,
+    LevitonAPI,
+    LevitonData,
+    LevitonException,
+)
 from .const import (
     CONF_DEVICES,
     CONF_RESIDENCES,
@@ -57,7 +62,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self.api: LevitonAPI = LevitonAPI()
         self.index = 0
-        self.response: list[LevitonResidence] = []
+        self.response: LevitonData = LevitonData()
         self.user_input: dict[str, Any] = {}
 
     @property
@@ -165,13 +170,15 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.user_input[CONF_RESIDENCES] = []
 
-            for residence in self.response:
+            for residence in self.response.residences:
                 if residence.name_location in user_input[CONF_RESIDENCES]:
                     self.user_input[CONF_RESIDENCES].append(residence.id)
 
             return await self.async_step_devices()
 
-        residence_names = [residence.name_location for residence in self.response]
+        residence_names = [
+            residence.name_location for residence in self.response.residences
+        ]
 
         if not residence_names:
             return await self.async_step_devices()
@@ -204,7 +211,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.user_input[CONF_DEVICES] = []
 
             target_residence = self.user_input[CONF_RESIDENCES][self.index]
-            for residence in self.response:
+            for residence in self.response.residences:
                 if residence.id == target_residence:
                     for device in residence.devices:
                         if device.name in user_input[CONF_DEVICES]:
@@ -219,7 +226,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title=self.config_title, data=self.user_input
             )
 
-        for residence in self.response:
+        for residence in self.response.residences:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
                 device_names = [
                     device.name
@@ -304,7 +311,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize Leviton Decora Smart Wi-Fi options flow."""
         self.api = LevitonAPI()
         self.index = 0
-        self.response = []
+        self.response: LevitonData = LevitonData()
         self.user_input = {}
 
     @property
@@ -331,18 +338,20 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             self.user_input[CONF_RESIDENCES] = [
                 residence.id
-                for residence in self.response
+                for residence in self.response.residences
                 if residence.name_location in user_input[CONF_RESIDENCES]
             ]
             return await self.async_step_devices()
 
         conf_residences = [
             residence.name_location
-            for residence in self.response
+            for residence in self.response.residences
             if residence.id
             in self.options.get(CONF_RESIDENCES, self.data[CONF_RESIDENCES])
         ]
-        residence_names = [residence.name_location for residence in self.response]
+        residence_names = [
+            residence.name_location for residence in self.response.residences
+        ]
 
         return self.async_show_form(
             step_id="residences",
@@ -366,7 +375,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         """Handle a flow initialized by the user."""
         if user_input is not None:
             target_residence = self.user_input[CONF_RESIDENCES][self.index]
-            for residence in self.response:
+            for residence in self.response.residences:
                 if residence.id == target_residence:
                     self.user_input[CONF_DEVICES].extend(
                         [
@@ -384,7 +393,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
         if self.index == 0:
             self.user_input[CONF_DEVICES] = []
 
-        for residence in self.response:
+        for residence in self.response.residences:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
                 conf_devices = [
                     device.name
@@ -393,7 +402,9 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
                     in self.options.get(CONF_DEVICES, self.data[CONF_DEVICES])
                 ]
                 device_names = [
-                    device.name for device in residence.devices if device.is_supported
+                    device.name
+                    for device in residence.devices
+                    if device.is_supported and device.name
                 ]
 
         return self.async_show_form(

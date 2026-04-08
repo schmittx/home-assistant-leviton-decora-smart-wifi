@@ -18,9 +18,28 @@ from .const import (
     LOGIN_SUCCESS,
     LOGIN_TOO_MANY_ATTEMPTS,
 )
+from .firmware import Firmware
 from .residence import Residence
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class LevitonData:
+    """LevitonData."""
+
+    def __init__(self, data: dict[str, Any] | None = None) -> None:
+        """Initialize."""
+        self.data = data if data is not None else {}
+
+    @property
+    def residences(self) -> list[Residence]:
+        """Residences."""
+        return self.data.get("residences", [])
+
+    @property
+    def firmware(self) -> list[Firmware]:
+        """Firmware."""
+        return self.data.get("firmware", [])
 
 
 class LevitonException(Exception):
@@ -32,7 +51,7 @@ class LevitonException(Exception):
         self.status_code = status_code
         self.name = name
         self.message = message
-        _LOGGER.debug(
+        _LOGGER.error(
             "\n- LevitionException\n- Status: %s\n- Name: %s\n- Message: %s, self.status_code, self.name, self.message"
         )
 
@@ -52,7 +71,7 @@ class LevitonAPI:
         self.user_id = user_id
 
         self.credentials: dict = {}
-        self.data: list[Residence] = []
+        self.data: LevitonData = LevitonData()
         self.session = requests.Session()
         self.user_name: str | None = None
 
@@ -199,60 +218,95 @@ class LevitonAPI:
                 )
             file.close()
 
-    def update(self, target_residences: list[int] | None = None) -> list[Residence]:
+    def update(self, target_residences: list[int] | None = None) -> LevitonData:
         """Update."""
         try:
-            data = []
-            permissions = self.call(
-                method="get",
-                url=f"person/{self.user_id}/residentialpermissions",
-            )
-            if permissions and isinstance(permissions, list):
-                for permission in permissions:
-                    residential_account_id = permission["residentialAccountId"]
-                    residences = self.call(
-                        method="get",
-                        url=f"residentialaccounts/{residential_account_id}/residences",
-                    )
-                    if residences and isinstance(residences, list):
-                        for residence in residences:
-                            if residence and isinstance(residence, dict):
-                                residence_id = residence["id"]
-                                if any(
-                                    [
-                                        target_residences is None,
-                                        target_residences
-                                        and residence_id in target_residences,
-                                    ]
-                                ):
-                                    residence["activities"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/residentialactivities",
-                                    )
-                                    residence["devices"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/iotswitches",
-                                        headers={
-                                            "filter": json.dumps(
-                                                obj={"include": ["iotButtons"]}
-                                            )
-                                        },
-                                    )
-                                    residence["rooms"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/residentialrooms",
-                                        headers={
-                                            "filter": json.dumps(
-                                                obj={"include": ["residentialScenes"]}
-                                            )
-                                        },
-                                    )
-                                    residence["schedules"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/residentialschedules",
-                                    )
-                                    data.append(Residence(self, residence))
-            self.data = data
+            data = {}
+            data["residences"] = self.get_residences(target_residences)
+            data["firmware"] = self.get_firmware(data["residences"])
+            self.data = LevitonData(data)
         except LevitonException:
             return self.data
         return self.data
+
+    def get_residences(
+        self, target_residences: list[int] | None = None
+    ) -> list[Residence]:
+        """Get residences."""
+        data = []
+        permissions = self.call(
+            method="get",
+            url=f"person/{self.user_id}/residentialpermissions",
+        )
+        if permissions and isinstance(permissions, list):
+            for permission in permissions:
+                residential_account_id = permission["residentialAccountId"]
+                residences = self.call(
+                    method="get",
+                    url=f"residentialaccounts/{residential_account_id}/residences",
+                )
+                if residences and isinstance(residences, list):
+                    for residence in residences:
+                        if residence and isinstance(residence, dict):
+                            residence_id = residence["id"]
+                            if any(
+                                [
+                                    target_residences is None,
+                                    target_residences
+                                    and residence_id in target_residences,
+                                ]
+                            ):
+                                residence["activities"] = self.call(
+                                    method="get",
+                                    url=f"residences/{residence_id}/residentialactivities",
+                                )
+                                residence["devices"] = self.call(
+                                    method="get",
+                                    url=f"residences/{residence_id}/iotswitches",
+                                    headers={
+                                        "filter": json.dumps(
+                                            obj={"include": ["iotButtons"]}
+                                        )
+                                    },
+                                )
+                                residence["rooms"] = self.call(
+                                    method="get",
+                                    url=f"residences/{residence_id}/residentialrooms",
+                                    headers={
+                                        "filter": json.dumps(
+                                            obj={"include": ["residentialScenes"]}
+                                        )
+                                    },
+                                )
+                                residence["schedules"] = self.call(
+                                    method="get",
+                                    url=f"residences/{residence_id}/residentialschedules",
+                                )
+                                data.append(Residence(self, residence))
+        return data
+
+    def get_firmware(self, residences: list[Residence]) -> list[Firmware]:
+        """Get firmware."""
+        models = []
+        for residence in residences:
+            for device in residence.devices:
+                if device.update_ready and device.model not in models:
+                    models.append(device.model)
+        firmware = []
+        for model in models:
+            model_firmware = self.call(
+                method="get",
+                url="lcsapps/getfirmware",
+                params={
+                    "appId": "DECORA_SMART_2",
+                    "model": model,
+                    "data": json.dumps(
+                        {
+                            "condensed": False,
+                        }
+                    ).encode("ascii"),
+                },
+            )
+            if model_firmware and isinstance(model_firmware, list):
+                firmware.append(Firmware(model_firmware[0]))
+        return firmware

@@ -14,7 +14,7 @@ DATA_COORDINATOR: str = "coordinator"
 
 DOMAIN: str = "leviton_decora_smart_wifi"
 
-RELEASE_URL: str = "https://decorasmartsupport.zendesk.com/hc/en-us/articles/4409216317339-Decora-Smart-Wi-Fi-2nd-Generation-Firmware-Release-Notes"
+RELEASE_URL: str = "https://leviton.com/support/resources/product-support/decora-smart-support/decora-smart-wi-fi/decora-smart-wi-fi-2nd-generation-firmware-release-notes"
 
 UNDO_UPDATE_LISTENER: str = "undo_update_listener"
 

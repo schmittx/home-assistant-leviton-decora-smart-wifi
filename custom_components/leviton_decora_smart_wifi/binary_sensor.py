@@ -53,7 +53,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonBinarySensorEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             for device in residence.devices:
                 if device.id in conf_devices:
