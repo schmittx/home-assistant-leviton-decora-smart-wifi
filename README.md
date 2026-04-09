@@ -33,6 +33,7 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - D26HD
 - D2ELV
 - D2MSD
+- DN6HD
 - DW1KD
 - DW3HL
 - DW6HD
@@ -49,9 +50,13 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - D215O
 - D215S
 - D2SCS
+- DN15S
 - DW15S
 
 ## Future Plans
 - Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with websockets).
 - Control of night settings start/end time
-- Support for D2GF2, DN15S, DN6HD, MLWSB
+
+## Notes
+- `DN15S` and `DN6HD` devices may report bridge linkage through diagnostic data such as `Bridge Serial`.
+- The required `MLWSB` bridge is not currently exposed by the My Leviton cloud device list as a standalone selectable device, so it is not added as its own Home Assistant device by this integration.

@@ -216,6 +216,21 @@ class Device:
         return self.data.get("localIP")
 
     @property
+    def bridge_id(self) -> int | None:
+        """Bridge ID."""
+        return self.data.get("iotBridgeId")
+
+    @property
+    def bridge_serial(self) -> str | None:
+        """Bridge serial."""
+        return self.data.get("iotBridgeSerial")
+
+    @property
+    def has_bridge(self) -> bool:
+        """Has bridge."""
+        return bool(self.bridge_id or self.bridge_serial)
+
+    @property
     def created(self) -> str | None:
         """Created."""
         return self.data.get("created")
@@ -284,6 +299,11 @@ class Device:
     def status_led_behavior_options(self) -> list[str]:
         """Status LED behavior options."""
         return list(STATUS_LED_MODE_MAP.values())
+
+    @property
+    def supports_status_led_behavior(self) -> bool:
+        """Supports status LED behavior configuration."""
+        return not self.is_controller and not self.is_gfci
 
     @status_led_behavior.setter
     def status_led_behavior(self, value: str) -> None:
@@ -514,6 +534,11 @@ class Device:
     def auto_shutoff_options(self) -> list[str]:
         """Auto shutoff options."""
         return list(AUTO_SHUTOFF_MAP.values())
+
+    @property
+    def supports_auto_shutoff(self) -> bool:
+        """Supports auto shutoff configuration."""
+        return not self.has_motion_sensor and not self.is_gfci
 
     @auto_shutoff.setter
     def auto_shutoff(self, value: str) -> None:
@@ -1025,7 +1050,7 @@ class Device:
         """Is switch."""
         return all(
             [
-                SUPPORTED_DEVICES_SWITCH,
+                self.model in SUPPORTED_DEVICES_SWITCH,
                 not self.is_fan,
                 not self.is_light,
             ]

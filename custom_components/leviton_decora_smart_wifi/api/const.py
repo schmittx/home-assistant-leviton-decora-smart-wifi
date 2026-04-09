@@ -35,6 +35,7 @@ class DeviceGeneration(IntEnum):
 class DeviceType(StrEnum):
     """Device type."""
 
+    BRIDGE = "bridge"
     CONTROLLER = "controller"
     FAN = "fan"
     GFCI = "gfci"
@@ -253,8 +254,23 @@ SUPPORTED_DEVICES = [
         DEVICE_GENERATION: DeviceGeneration.TWO,
     },
     {
+        DEVICE_MODEL: "DN15S",
+        DEVICE_TYPE: [DeviceType.SWITCH],
+        DEVICE_GENERATION: DeviceGeneration.TWO,
+    },
+    {
+        DEVICE_MODEL: "DN6HD",
+        DEVICE_TYPE: [DeviceType.LIGHT],
+        DEVICE_GENERATION: DeviceGeneration.TWO,
+    },
+    {
         DEVICE_MODEL: "D2SCS",
         DEVICE_TYPE: [DeviceType.CONTROLLER, DeviceType.SWITCH],
+        DEVICE_GENERATION: DeviceGeneration.TWO,
+    },
+    {
+        DEVICE_MODEL: "MLWSB",
+        DEVICE_TYPE: [DeviceType.BRIDGE],
         DEVICE_GENERATION: DeviceGeneration.TWO,
     },
     {
@@ -307,6 +323,12 @@ SUPPORTED_DEVICES = [
         DEVICE_TYPE: [DeviceType.LIGHT],
         DEVICE_GENERATION: DeviceGeneration.ONE,
     },
+]
+
+SUPPORTED_DEVICES_BRIDGE = [
+    device[DEVICE_MODEL]
+    for device in SUPPORTED_DEVICES
+    if DeviceType.BRIDGE in device[DEVICE_TYPE]
 ]
 
 SUPPORTED_DEVICES_CONTROLLER = [
