@@ -39,6 +39,7 @@ from .api import (
 )
 from .const import (
     CONF_DEVICES,
+    CONF_LOGIN_RESPONSE,
     CONF_RESIDENCES,
     CONF_SAVE_RESPONSES,
     CONF_TIMEOUT,
@@ -83,6 +84,8 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.user_input[CONF_ID] = self.api.user_id
         self.user_input[CONF_NAME] = self.api.user_name
         self.user_input[CONF_TOKEN] = self.api.authorization
+        if self.api.login_response is not None:
+            self.user_input[CONF_LOGIN_RESPONSE] = self.api.login_response
 
         return await self.async_step_residences()
 

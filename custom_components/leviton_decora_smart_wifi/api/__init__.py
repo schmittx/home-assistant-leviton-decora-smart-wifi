@@ -74,6 +74,7 @@ class LevitonAPI:
         self.data: LevitonData = LevitonData()
         self.session = requests.Session()
         self.user_name: str | None = None
+        self.login_response: dict[str, Any] | None = None
 
     def call(
         self,
@@ -131,6 +132,7 @@ class LevitonAPI:
                     response["user"]["firstName"],
                     response["user"]["lastName"],
                 )
+                self.login_response = response
         except LevitonException as exception:
             if all(
                 [
@@ -178,8 +180,21 @@ class LevitonAPI:
         return text
 
     def refresh(self, function: Callable) -> requests.Response:
-        """Refresh login authorization."""
-        response = function()
+        """Refresh login authorization, retrying once on a stale connection.
+
+        Leviton's REST endpoint silently closes pooled keep-alive
+        connections; the next request on a stale connection fails with
+        ``ConnectionError``/``RemoteDisconnected`` and HA marks every
+        coordinator-bound entity unavailable until the next cycle. Retry
+        once after rotating the requests.Session so the client gets a
+        fresh socket.
+        """
+        try:
+            response = function()
+        except requests.exceptions.ConnectionError:
+            _LOGGER.debug("Leviton REST connection dropped; retrying with fresh session")
+            self.session = requests.Session()
+            response = function()
         if response.status_code != 200:
             text = json.loads(response.text)
             error = text["error"]
