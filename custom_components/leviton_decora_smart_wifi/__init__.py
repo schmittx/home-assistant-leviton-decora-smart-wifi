@@ -8,14 +8,18 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    CONF_EMAIL,
     CONF_ID,
     CONF_NAME,
+    CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_TOKEN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -32,19 +36,24 @@ from .api.residence import Residence as LevitonResidence
 from .api.room import Room as LevitonRoom
 from .api.scene import Scene as LevitonScene
 from .api.schedule import Schedule as LevitonSchedule
+from .api.websocket import LevitonWebSocket
 from .const import (
     CONF_DEVICES,
+    CONF_LOGIN_RESPONSE,
     CONF_RESIDENCES,
     CONF_SAVE_RESPONSES,
     CONF_TIMEOUT,
     CONFIGURATION_URL,
     DATA_API,
     DATA_COORDINATOR,
+    DATA_WEBSOCKET,
     DEFAULT_SAVE_LOCATION,
     DEFAULT_SAVE_RESPONSES,
     DEVICE_INFO_MANUFACTURER,
     DEVICE_INFO_MODEL_RESIDENCE,
     DOMAIN,
+    EVENT_NOTIFICATION,
+    SIGNAL_NOTIFICATION,
     UNDO_UPDATE_LISTENER,
     ScanInterval,
     Timeout,
@@ -53,6 +62,7 @@ from .const import (
 PLATFORMS = (
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.EVENT,
     Platform.FAN,
     Platform.IMAGE,
     Platform.LIGHT,
@@ -153,9 +163,107 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         UNDO_UPDATE_LISTENER: config_entry.add_update_listener(async_update_listener),
     }
 
+    websocket = await _async_start_websocket(
+        hass,
+        config_entry,
+        api,
+        coordinator,
+        conf_residences,
+        conf_devices,
+    )
+    if websocket is not None:
+        hass.data[DOMAIN][config_entry.entry_id][DATA_WEBSOCKET] = websocket
+
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
+
+
+async def _async_start_websocket(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    api: LevitonAPI,
+    coordinator: DataUpdateCoordinator,
+    conf_residences: list[int],
+    conf_devices: list[int],
+) -> LevitonWebSocket | None:
+    """Open the MyLeviton websocket using the bearer already in config.
+
+    We deliberately do NOT call ``LevitonAPI.login`` from this path:
+    each re-login attempt counts toward Leviton's "too many failed
+    attempts" lockout, and a flapping websocket will burn through them.
+    Instead we synthesize the token payload from the bearer + user id
+    already persisted in the config entry. If that auth fails the WS
+    client backs off ``AUTH_FAILURE_COOLDOWN`` (1h) before any retry.
+    """
+    bearer = config_entry.data.get(CONF_TOKEN)
+    user_id = config_entry.data.get(CONF_ID)
+    if not bearer or not user_id:
+        _LOGGER.warning("Leviton websocket disabled: bearer/user id missing")
+        return None
+
+    @callback
+    def token_provider() -> dict | None:
+        # Re-read from config_entry on every reconnect so a re-auth via
+        # the options flow propagates without an HA restart. Prefer the
+        # full login response object captured at config-flow time — the
+        # cloud's WS auth historically needs the entire response, not
+        # just the bearer + user id.
+        full = config_entry.data.get(CONF_LOGIN_RESPONSE)
+        if isinstance(full, dict) and full.get("id"):
+            return full
+        current = config_entry.data.get(CONF_TOKEN)
+        uid = config_entry.data.get(CONF_ID)
+        if not current or not uid:
+            return None
+        return {"id": current, "userId": uid}
+
+    @callback
+    def on_notification(notification: dict) -> None:
+        if not isinstance(notification, dict):
+            return
+        hass.bus.async_fire(EVENT_NOTIFICATION, notification)
+        async_dispatcher_send(
+            hass, f"{SIGNAL_NOTIFICATION}_{config_entry.entry_id}", notification
+        )
+
+    subs = _collect_subscriptions(coordinator, conf_residences, conf_devices)
+    _LOGGER.debug(
+        "Leviton websocket: starting client with %d subscription(s)", len(subs)
+    )
+    websocket = LevitonWebSocket(
+        session=async_get_clientsession(hass),
+        token_provider=token_provider,
+        on_notification=on_notification,
+    )
+    websocket.set_subscriptions(subs)
+    websocket.start()
+    return websocket
+
+
+def _collect_subscriptions(
+    coordinator: DataUpdateCoordinator,
+    conf_residences: list[int],
+    conf_devices: list[int],
+) -> list[tuple[str, int]]:
+    """Build the list of (modelName, modelId) the WS should subscribe to.
+
+    Empirically the cloud delivers physical button presses on the parent
+    IotSwitch as ``data.btnPress: [{button: N, trigger: T}]`` — there is
+    no separate IotButton push channel, so we don't subscribe to one.
+    """
+    subs: list[tuple[str, int]] = []
+    data: LevitonData | None = coordinator.data
+    if data is None:
+        return subs
+    for residence in data.residences:
+        if residence.id not in conf_residences:
+            continue
+        for device in residence.devices:
+            if device.id not in conf_devices:
+                continue
+            subs.append(("IotSwitch", device.id))
+    return subs
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -165,7 +273,11 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         platforms=PLATFORMS,
     )
     if unload_ok:
-        hass.data[DOMAIN][config_entry.entry_id][UNDO_UPDATE_LISTENER]()
+        entry_data = hass.data[DOMAIN][config_entry.entry_id]
+        entry_data[UNDO_UPDATE_LISTENER]()
+        websocket: LevitonWebSocket | None = entry_data.get(DATA_WEBSOCKET)
+        if websocket is not None:
+            await websocket.stop()
         hass.data[DOMAIN].pop(config_entry.entry_id)
 
     return unload_ok

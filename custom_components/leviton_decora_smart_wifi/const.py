@@ -11,8 +11,16 @@ CONFIGURATION_URL: str = "https://my.leviton.com/home"
 
 DATA_API: str = "api"
 DATA_COORDINATOR: str = "coordinator"
+DATA_WEBSOCKET: str = "websocket"
+
+CONF_LOGIN_RESPONSE: str = "login_response"
 
 DOMAIN: str = "leviton_decora_smart_wifi"
+
+EVENT_NOTIFICATION: str = f"{DOMAIN}_notification"
+EVENT_BUTTON_PRESSED: str = f"{DOMAIN}_button_pressed"
+
+SIGNAL_NOTIFICATION: str = f"{DOMAIN}_notification_signal"
 
 RELEASE_URL: str = "https://leviton.com/support/resources/product-support/decora-smart-support/decora-smart-wi-fi/decora-smart-wi-fi-2nd-generation-firmware-release-notes"
 

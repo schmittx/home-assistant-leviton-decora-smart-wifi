@@ -7,10 +7,10 @@
   "dependencies": [],
   "documentation": "https://github.com/schmittx/home-assistant-leviton-decora-smart-wifi",
   "integration_type": "hub",
-  "iot_class": "cloud_polling",
+  "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/schmittx/home-assistant-leviton-decora-smart-wifi/issues",
-  "loggers": [],
+  "loggers": ["custom_components.leviton_decora_smart_wifi"],
   "quality_scale": "gold",
   "requirements": ["pypng==0.20220715.0", "PyQRCode==1.2.1"],
-  "version": "1.7.2"
+  "version": "1.8.0"
 }
