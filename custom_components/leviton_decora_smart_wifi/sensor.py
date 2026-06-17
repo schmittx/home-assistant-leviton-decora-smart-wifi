@@ -34,12 +34,10 @@ class LevitonSensorEntityDescription(SensorEntityDescription):
 
 SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
     LevitonSensorEntityDescription(
-        key="fault_status",
-        name="Fault Status",
-        device_class=SensorDeviceClass.ENUM,
-        options=[status.value for status in GFCIStatus],
-        icon="mdi:lightning-bolt-circle",
-        is_supported=lambda device: device.is_gfci,
+        key="bridge_id",
+        name="Bridge ID",
+        icon="mdi:identifier",
+        is_supported=lambda device: device.has_bridge,
     ),
     LevitonSensorEntityDescription(
         key="bridge_serial",
@@ -48,15 +46,17 @@ SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
         is_supported=lambda device: device.has_bridge,
     ),
     LevitonSensorEntityDescription(
+        key="fault_status",
+        name="Fault Status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[status.value for status in GFCIStatus],
+        icon="mdi:lightning-bolt-circle",
+        is_supported=lambda device: device.is_gfci,
+    ),
+    LevitonSensorEntityDescription(
         key="local_ip",
         name="IP Address",
         icon="mdi:ip",
-    ),
-    LevitonSensorEntityDescription(
-        key="bridge_id",
-        name="Bridge ID",
-        icon="mdi:identifier",
-        is_supported=lambda device: device.has_bridge,
     ),
     LevitonSensorEntityDescription(
         key="signal_strength",

@@ -32,7 +32,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         name="Auto Shutoff",
         options_key="auto_shutoff_options",
         icon="mdi:timer",
-        is_supported=lambda device: device.supports_auto_shutoff,
+        is_supported=lambda device: device.is_auto_shutoff_capable,
     ),
     LevitonSelectEntityDescription(
         key="away_activity",
@@ -123,7 +123,7 @@ SELECT_DESCRIPTIONS: list[LevitonSelectEntityDescription] = [
         name="Status LED Behavior",
         options_key="status_led_behavior_options",
         icon="mdi:led-on",
-        is_supported=lambda device: device.supports_status_led_behavior,
+        is_supported=lambda device: device.is_status_led_behavior_capable,
     ),
 ]
 
