@@ -1,10 +1,9 @@
 """Leviton API."""
 
-from __future__ import annotations
-
+from http import HTTPMethod
 import io
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 import pyqrcode
 
@@ -30,6 +29,7 @@ from .const import (
     SUPPORTED_DEVICES_OUTLET,
     SUPPORTED_DEVICES_SWITCH,
     ControlTiming,
+    DeviceGeneration,
     DimmingMode,
     GFCIStatus,
     Level,
@@ -42,6 +42,7 @@ from .const import (
     StatusLEDMode,
     TimePeriod,
 )
+from .util import version_tuple
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class Device:
         """Initialize."""
         self.api = api
         self.residence = residence
-        self.data = data
+        self.data: dict[str, Any] = data
 
     @property
     def name(self) -> str | None:
@@ -70,7 +71,7 @@ class Device:
         if value not in (Power.OFF, Power.ON):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"power": value},
         )
@@ -82,11 +83,11 @@ class Device:
 
     def turn_on(self) -> None:
         """Turn on."""
-        setattr(self, "power", Power.ON)
+        self.power = Power.ON
 
     def turn_off(self) -> None:
         """Turn off."""
-        setattr(self, "power", Power.OFF)
+        self.power = Power.OFF
 
     @property
     def brightness(self) -> int | None:
@@ -98,14 +99,14 @@ class Device:
         if not isinstance(value, int):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"power": Power.ON, "brightness": value},
         )
 
     def set_brightness(self, value: int) -> None:
         """Set brightness."""
-        setattr(self, "brightness", value)
+        self.brightness = value
 
     def set_speed(self, value: int) -> None:
         """Set speed."""
@@ -158,7 +159,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"minLevel": int(value), "maxLevel": self.max_level},
         )
@@ -190,7 +191,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"minLevel": self.min_level, "maxLevel": int(value)},
         )
@@ -263,7 +264,7 @@ class Device:
         if not isinstance(value, bool):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"isRandomEnabled": value},
         )
@@ -290,7 +291,7 @@ class Device:
         if value not in self.status_led_behavior_options:
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "statusLED": list(STATUS_LED_MODE_MAP.keys())[
@@ -314,7 +315,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"statusLED": StatusLED.ENABLED if value else StatusLED.DISABLED},
         )
@@ -346,7 +347,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "dimLED": list(DIM_LED_MAP.keys())[
@@ -389,7 +390,7 @@ class Device:
             return
         json_value = list(LOAD_TYPE_MAP.keys())[self.bulb_type_options.index(value)]
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"loadType": json_value},
         )
@@ -434,7 +435,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "fadeOffTime": list(FADE_ON_OFF_RATE_MAP.keys())[
@@ -454,7 +455,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "fadeOnTime": list(FADE_ON_OFF_RATE_MAP.keys())[
@@ -485,7 +486,7 @@ class Device:
             return
         _LOGGER.debug("[%s] Setting preset level to: %s%%", self.name, int(value))
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"presetLevel": int(value)},
         )
@@ -493,7 +494,7 @@ class Device:
     def identify(self) -> None:
         """Identify."""
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"identify": 10},
         )
@@ -525,7 +526,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "autoOffTime": list(AUTO_SHUTOFF_MAP.keys())[
@@ -560,7 +561,7 @@ class Device:
     def apply_update(self) -> None:
         """Apply update."""
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"apply_ota": 2},
         )
@@ -593,7 +594,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "triacOff": list(CONTROL_TIMING_MAP.keys())[
@@ -623,7 +624,7 @@ class Device:
             return
         _LOGGER.debug("[%s] Setting night preset level to: %s%%", self.name, int(value))
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"motionNightLevel": int(value)},
         )
@@ -651,7 +652,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "motionNightMode": list(MOTION_NIGHT_MODE_MAP.keys())[
@@ -680,7 +681,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"lightEnable": bool(value)},
         )
@@ -705,7 +706,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"motionDisable": (not bool(value))},
         )
@@ -725,7 +726,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"motionLED": value},
         )
@@ -753,7 +754,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "motionMode": list(MOTION_MODE_MAP.keys())[
@@ -785,7 +786,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={
                 "motionTimeout": list(MOTION_TIMEOUT_MAP.keys())[
@@ -835,7 +836,7 @@ class Device:
         ]:
             json = {"motionDisable": True, "motionDisableTime": json_value}
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json=json,
         )
@@ -854,7 +855,7 @@ class Device:
             "[%s] Setting motion ambient threshold to: %s%%", self.name, int(value)
         )
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"motionAmbientThr": int(value)},
         )
@@ -906,7 +907,7 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"enableBuzzer": bool(value)},
         )
@@ -916,7 +917,7 @@ class Device:
         if not self.is_gfci:
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"silenceBuzzer": True},
         )
@@ -949,9 +950,24 @@ class Device:
         ):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.residence.id}/iotswitches/{self.id}",
             json={"reversePhase": bool(value == DimmingMode.REVERSE)},
+        )
+
+    @property
+    def smart_bulb_mode_enabled(self) -> bool | None:
+        """Smart bulb mode enabled."""
+        return self.data.get("smartBulbModeEnabled")
+
+    @smart_bulb_mode_enabled.setter
+    def smart_bulb_mode_enabled(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            return
+        self.api.call(
+            method=HTTPMethod.PUT,
+            url=f"residences/{self.residence.id}/iotswitches/{self.id}",
+            json={"smartBulbModeEnabled": value},
         )
 
     @property
@@ -960,7 +976,7 @@ class Device:
         buttons = [
             Button(self.api, self, button) for button in self.data.get("iotButtons", [])
         ]
-        if self.is_generation_two:
+        if self.generation == DeviceGeneration.TWO:
             return [button for button in buttons if button.number != 4]
         return buttons
 
@@ -977,17 +993,7 @@ class Device:
     @property
     def is_fan(self) -> bool:
         """Is fan."""
-        return any(
-            [
-                self.model in SUPPORTED_DEVICES_FAN,
-                all(
-                    [
-                        self.model in SUPPORTED_DEVICES_SWITCH,
-                        self.name is not None and "fan" in self.name.lower(),
-                    ]
-                ),
-            ]
-        )
+        return bool(self.model in SUPPORTED_DEVICES_FAN)
 
     @property
     def is_gfci(self) -> bool:
@@ -997,44 +1003,26 @@ class Device:
     @property
     def is_light(self) -> bool:
         """Is light."""
-        return any(
-            [
-                self.model in SUPPORTED_DEVICES_LIGHT,
-                all(
-                    [
-                        self.model in SUPPORTED_DEVICES_SWITCH,
-                        self.name is not None and "light" in self.name.lower(),
-                    ]
-                ),
-            ]
-        )
+        return bool(self.model in SUPPORTED_DEVICES_LIGHT)
 
     @property
     def is_outlet(self) -> bool:
         """Is outlet."""
-        return all(
-            [
-                self.model in SUPPORTED_DEVICES_OUTLET,
-                not self.is_fan,
-                not self.is_light,
-            ]
-        )
+        return bool(self.model in SUPPORTED_DEVICES_OUTLET)
 
     @property
     def is_switch(self) -> bool:
         """Is switch."""
-        return all(
-            [
-                SUPPORTED_DEVICES_SWITCH,
-                not self.is_fan,
-                not self.is_light,
-            ]
-        )
+        return bool(self.model in SUPPORTED_DEVICES_SWITCH)
 
     @property
-    def is_generation_two(self) -> bool:
-        """Is second generation."""
-        return bool(self.model in SUPPORTED_DEVICES_GENERATION_TWO)
+    def generation(self) -> DeviceGeneration:
+        """Generation."""
+        return (
+            DeviceGeneration.TWO
+            if self.model in SUPPORTED_DEVICES_GENERATION_TWO
+            else DeviceGeneration.ONE
+        )
 
     @property
     def has_led_bar(self) -> bool:
@@ -1065,3 +1053,13 @@ class Device:
     def is_matter_capable(self) -> bool:
         """Is matter capable."""
         return bool(self._matter_qr_code)
+
+    @property
+    def is_smart_bulb_mode_capable(self) -> bool:
+        """Is smart bulb mode capable."""
+        return all(
+            [
+                self.version and version_tuple(self.version) >= version_tuple("1.6.9"),
+                self.model in ["D215S", "D2SCS", "D26HD", "D2MSD", "D2ELV"],
+            ]
+        )

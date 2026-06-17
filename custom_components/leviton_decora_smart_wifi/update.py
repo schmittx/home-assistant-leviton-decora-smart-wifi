@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi update entities."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,8 +14,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LevitonEntity
-from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN, RELEASE_URL
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
@@ -102,8 +100,8 @@ class LevitonUpdateEntity(UpdateEntity, LevitonEntity):
     @property
     def release_url(self) -> str | None:
         """URL to the full release notes of the latest version available."""
-        if self.device is not None and self.device.is_generation_two:
-            return RELEASE_URL
+        if self.firmware is not None:
+            return self.firmware.release_url
         return None
 
     @property

@@ -1,7 +1,6 @@
 """Leviton API."""
 
-from __future__ import annotations
-
+from http import HTTPMethod
 from typing import Literal
 
 from .activity import Activity
@@ -51,7 +50,7 @@ class Residence:
             return
         json_value = list(STATUS_MAP.keys())[list(STATUS_MAP.values()).index(value)]
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.id}",
             json={"status": json_value},
         )
@@ -59,20 +58,20 @@ class Residence:
     @property
     def is_away(self) -> bool:
         """Is away."""
-        return bool(self.status == "AWAY")
+        return bool(self.status == Status.HOME)
 
     @property
     def is_home(self) -> bool:
         """Is home."""
-        return bool(self.status == "HOME")
+        return bool(self.status == Status.HOME)
 
     def set_away(self) -> None:
         """Set away."""
-        setattr(self, "status", "AWAY")
+        self.status = Status.AWAY
 
     def set_home(self) -> None:
         """Set home."""
-        setattr(self, "status", "HOME")
+        self.status = Status.HOME
 
     @property
     def auto_update_enabled(self) -> bool | None:
@@ -84,7 +83,7 @@ class Residence:
         if not isinstance(value, bool):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.id}",
             json={"isAutoUpdateEnabled": value},
         )
@@ -99,7 +98,7 @@ class Residence:
         if not isinstance(value, bool):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.id}",
             json={"isRandomEnabled": value},
         )
@@ -194,7 +193,7 @@ class Residence:
         if not isinstance(value, bool):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.id}",
             json={"isOnHomeActivityEnabled": value},
         )
@@ -209,7 +208,7 @@ class Residence:
         if not isinstance(value, bool):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residences/{self.id}",
             json={"isOnAwayActivityEnabled": value},
         )
@@ -253,13 +252,13 @@ class Residence:
         target_activity_id = self.home_away_activity_map.get(value)
         if current_activity_id:
             self.api.call(
-                method="put",
+                method=HTTPMethod.PUT,
                 url=f"residentialactivities/{current_activity_id}",
                 json={"onHomeId": None},
             )
         if target_activity_id:
             self.api.call(
-                method="put",
+                method=HTTPMethod.PUT,
                 url=f"residentialactivities/{target_activity_id}",
                 json={"onHomeId": self.id},
             )
@@ -292,13 +291,13 @@ class Residence:
         target_activity_id = self.home_away_activity_map.get(value)
         if current_activity_id:
             self.api.call(
-                method="put",
+                method=HTTPMethod.PUT,
                 url=f"residentialactivities/{current_activity_id}",
                 json={"onAwayId": None},
             )
         if target_activity_id:
             self.api.call(
-                method="put",
+                method=HTTPMethod.PUT,
                 url=f"residentialactivities/{target_activity_id}",
                 json={"onAwayId": self.id},
             )

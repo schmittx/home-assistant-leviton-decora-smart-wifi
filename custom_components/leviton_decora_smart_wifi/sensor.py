@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi sensor entities."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -20,9 +18,9 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from . import LevitonEntity
 from .api.const import GFCIStatus
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
