@@ -1,6 +1,6 @@
 """Leviton API."""
 
-from __future__ import annotations
+from http import HTTPMethod
 
 
 class Button:
@@ -45,7 +45,7 @@ class Button:
         for action in self.actions:
             for parameter in action.parameters:
                 self.api.call(
-                    method="post",
+                    method=HTTPMethod.POST,
                     url="residentialactivities/execute",
                     params={"id": parameter.value},
                 )

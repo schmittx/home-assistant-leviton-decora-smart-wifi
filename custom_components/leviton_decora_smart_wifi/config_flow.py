@@ -30,15 +30,11 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .api import (
-    LOGIN_CODE_REQUIRED,
-    LOGIN_SUCCESS,
-    LevitonAPI,
-    LevitonData,
-    LevitonException,
-)
+from .api import LevitonAPI, LevitonData, LevitonException
+from .api.const import LoginResult as LevitonLoginResult
 from .const import (
     CONF_DEVICES,
+    CONF_LOGIN_RESPONSE,
     CONF_RESIDENCES,
     CONF_SAVE_RESPONSES,
     CONF_TIMEOUT,
@@ -55,7 +51,7 @@ _LOGGER = logging.getLogger(__name__)
 class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Leviton Decora Smart Wi-Fi integration."""
 
-    VERSION = 1
+    VERSION = 2
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     def __init__(self) -> None:
@@ -83,6 +79,8 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.user_input[CONF_ID] = self.api.user_id
         self.user_input[CONF_NAME] = self.api.user_name
         self.user_input[CONF_TOKEN] = self.api.authorization
+        if self.api.login_response is not None:
+            self.user_input[CONF_LOGIN_RESPONSE] = self.api.login_response
 
         return await self.async_step_residences()
 
@@ -101,10 +99,10 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.user_input[CONF_PASSWORD],
             )
 
-            if result == LOGIN_CODE_REQUIRED:
+            if result == LevitonLoginResult.CODE_REQUIRED:
                 _LOGGER.debug("Two factor authentication is required for the account")
                 return await self.async_step_authenticate()
-            if result == LOGIN_SUCCESS:
+            if result == LevitonLoginResult.SUCCESS:
                 _LOGGER.debug("Login successful")
                 return await self.async_finish_login(errors)
             errors["base"] = result
@@ -143,7 +141,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.user_input[CONF_CODE],
             )
 
-            if result == LOGIN_SUCCESS:
+            if result == LevitonLoginResult.SUCCESS:
                 _LOGGER.debug("Login successful")
                 return await self.async_finish_login(errors)
             errors["base"] = result
@@ -220,11 +218,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if self.index == len(self.user_input[CONF_RESIDENCES]):
             self.index = 0
-            if self.show_advanced_options:
-                return await self.async_step_advanced()
-            return self.async_create_entry(
-                title=self.config_title, data=self.user_input
-            )
+            return await self.async_step_advanced()
 
         for residence in self.response.residences:
             if residence.id == self.user_input[CONF_RESIDENCES][self.index]:
@@ -280,7 +274,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             min=ScanInterval.MIN,
                             max=ScanInterval.MAX,
                             step=ScanInterval.STEP,
-                            unit_of_measurement=UnitOfTime.SECONDS,
+                            unit_of_measurement=UnitOfTime.MINUTES,
                         )
                     ),
                     vol.Optional(CONF_TIMEOUT, default=Timeout.DEFAULT): NumberSelector(
@@ -387,9 +381,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
                     self.index += 1
 
         if self.index == len(self.user_input[CONF_RESIDENCES]):
-            if self.show_advanced_options:
-                return await self.async_step_advanced()
-            return self.async_create_entry(title="", data=self.user_input)
+            return await self.async_step_advanced()
         if self.index == 0:
             self.user_input[CONF_DEVICES] = []
 
@@ -457,7 +449,7 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
                             min=ScanInterval.MIN,
                             max=ScanInterval.MAX,
                             step=ScanInterval.STEP,
-                            unit_of_measurement=UnitOfTime.SECONDS,
+                            unit_of_measurement=UnitOfTime.MINUTES,
                         )
                     ),
                     vol.Optional(CONF_TIMEOUT, default=conf_timeout): NumberSelector(
