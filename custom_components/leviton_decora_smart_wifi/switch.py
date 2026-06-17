@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi switch entities."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -16,8 +14,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LevitonEntity
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
@@ -60,10 +58,15 @@ SWITCH_DESCRIPTIONS: list[LevitonSwitchEntityDescription] = [
         key="random_enabled",
         name="Randomization",
         icon="mdi:shuffle",
-        is_supported=lambda device: device.is_fan
-        or device.is_light
-        or device.is_outlet
-        or device.is_switch,
+        is_supported=lambda device: (
+            device.is_fan or device.is_light or device.is_outlet or device.is_switch
+        ),
+    ),
+    LevitonSwitchEntityDescription(
+        key="smart_bulb_mode_enabled",
+        name="Smart Bulb Mode",
+        icon="mdi:lightbulb-on",
+        is_supported=lambda device: device.is_smart_bulb_mode_capable,
     ),
     LevitonSwitchEntityDescription(
         key="status_led_enabled",
@@ -86,7 +89,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonSwitchEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             entities.extend(
                 LevitonSwitchEntity(

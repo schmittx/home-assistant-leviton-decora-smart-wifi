@@ -1,7 +1,5 @@
 """Leviton API."""
 
-from __future__ import annotations
-
 from .scene import Scene
 
 

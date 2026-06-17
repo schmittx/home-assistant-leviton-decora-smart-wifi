@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi scene entities."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,8 +9,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory, EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LevitonEntity
 from .const import CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
@@ -31,7 +29,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonSceneEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             for room in residence.rooms:
                 entities.extend(

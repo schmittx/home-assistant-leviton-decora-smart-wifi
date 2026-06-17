@@ -1,6 +1,6 @@
 """Leviton API."""
 
-from __future__ import annotations
+from http import HTTPMethod
 
 
 class Schedule:
@@ -32,18 +32,18 @@ class Schedule:
         if not isinstance(value, bool):
             return
         self.api.call(
-            method="put",
+            method=HTTPMethod.PUT,
             url=f"residentialschedules/{self.id}",
             json={"disabled": bool(not value)},
         )
 
     def enable(self) -> None:
         """Enable."""
-        setattr(self, "enabled", True)
+        self.enabled = True
 
     def disable(self) -> None:
         """Disable."""
-        setattr(self, "enabled", False)
+        self.enabled = False
 
     @property
     def residence_id(self) -> int | None:

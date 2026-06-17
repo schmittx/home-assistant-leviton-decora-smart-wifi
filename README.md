@@ -7,6 +7,23 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - Additional entities have been added to manage configuration for each device as well (ex. auto shutoff, max/min dimming levels, etc.).
 - Support for activities (`button`), Home/Away status (`select`), scenes (`scene`), and schedules (`switch`) is also included.
 - Support for two-factor authentication.
+- **Real-time cloud push via the MyLeviton websocket**
+    - State changes on all devices in general are reflected instantly
+    - Physical button presses on scene controllers (DW4BC, D2SCS) are reflected in a few seconds (due to limitations from Leviton's API).
+    - Changes for residence, schedules, or activities still rely on polling
+
+## Button presses
+Each controller button is exposed as an `event` entity (e.g. `event.<controller>_<button_name>_press`). Use it as a state trigger in automations:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.your_controller_button_1_press
+    not_from: [unavailable, unknown]
+    not_to:   [unavailable, unknown]
+```
+
+*Note: Leviton's API only emits `btnPress` notifications for buttons that have at least one action configured in the MyLeviton mobile app. Bind each button you want to expose in Home Assistant to any placeholder action in the MyLeviton app, the button itself doesn't need to do anything meaningful for Home Assistant to receive the press.*
 
 ## Install
 1. Ensure Home Assistant is updated to version 2026.3.0 or newer.
@@ -54,7 +71,6 @@ Custom component to allow control of [Leviton Decora Smart Wi-Fi devices](https:
 - DW15S
 
 ## Future Plans
-- Websocket support to allow for cloud push updates (any help with this would be appreciated as I have no experience with websockets).
 - Control of night settings start/end time
 
 ## Notes

@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi sensor entities."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -20,9 +18,9 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from . import LevitonEntity
 from .api.const import GFCIStatus
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
@@ -83,7 +81,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonSensorEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             entities.extend(
                 LevitonSensorEntity(

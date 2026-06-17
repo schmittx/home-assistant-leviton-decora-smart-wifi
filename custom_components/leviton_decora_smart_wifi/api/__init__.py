@@ -1,8 +1,7 @@
 """Leviton API."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
+from http import HTTPMethod
 import json
 import logging
 from pathlib import Path
@@ -10,17 +9,29 @@ from typing import Any
 
 import requests
 
-from .const import (
-    API_ENDPOINT,
-    LOGIN_CODE_INVALID,
-    LOGIN_CODE_REQUIRED,
-    LOGIN_FAILED,
-    LOGIN_SUCCESS,
-    LOGIN_TOO_MANY_ATTEMPTS,
-)
+from .const import API_ENDPOINT, FIRMWARE_APP_MAP, FirmwareAppID, LoginResult
+from .firmware import Firmware
 from .residence import Residence
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class LevitonData:
+    """LevitonData."""
+
+    def __init__(self, data: dict[str, Any] | None = None) -> None:
+        """Initialize."""
+        self.data = data if data is not None else {}
+
+    @property
+    def firmware(self) -> dict[str, Firmware]:
+        """Firmware."""
+        return self.data.get("firmware", {})
+
+    @property
+    def residences(self) -> list[Residence]:
+        """Residences."""
+        return self.data.get("residences", [])
 
 
 class LevitonException(Exception):
@@ -32,7 +43,7 @@ class LevitonException(Exception):
         self.status_code = status_code
         self.name = name
         self.message = message
-        _LOGGER.debug(
+        _LOGGER.error(
             "\n- LevitionException\n- Status: %s\n- Name: %s\n- Message: %s, self.status_code, self.name, self.message"
         )
 
@@ -52,55 +63,41 @@ class LevitonAPI:
         self.user_id = user_id
 
         self.credentials: dict = {}
-        self.data: list[Residence] = []
+        self.data: LevitonData = LevitonData()
         self.session = requests.Session()
         self.user_name: str | None = None
+        self.login_response: dict[str, Any] | None = None
 
     def call(
         self,
-        method: str,
+        method: HTTPMethod,
         url: str,
         headers: dict | None = None,
         **kwargs,
     ) -> list[dict] | dict[str, Any] | None:
         """Call."""
-        if method not in ("get", "post", "put"):
-            return None
         if headers is None:
             headers = {}
         if self.authorization:
             headers["authorization"] = self.authorization
         _LOGGER.debug("Calling API with method: %s and URL: %s", method, url)
-        if method == "get":
-            response = self.refresh(
-                lambda: self.session.get(
-                    url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
-                )
+        response = self.refresh(
+            lambda: self.session.request(
+                method=method, url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
             )
-        if method == "post":
-            response = self.refresh(
-                lambda: self.session.post(
-                    url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
-                )
-            )
-        if method == "put":
-            response = self.refresh(
-                lambda: self.session.put(
-                    url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
-                )
-            )
+        )
         response = self.parse_response(response=response)
         self.save_response(response=response, name=url)
         return response
 
-    def login(self, email: str, password: str, code: str | None = None) -> str:
+    def login(self, email: str, password: str, code: str | None = None) -> LoginResult:
         """Login."""
         try:
             data = {"email": email, "password": password}
             if code:
                 data["code"] = code
             response = self.call(
-                method="post",
+                method=HTTPMethod.POST,
                 url="person/login",
                 params={"include": "user"},
                 data=data,
@@ -112,6 +109,7 @@ class LevitonAPI:
                     response["user"]["firstName"],
                     response["user"]["lastName"],
                 )
+                self.login_response = response
         except LevitonException as exception:
             if all(
                 [
@@ -119,14 +117,14 @@ class LevitonAPI:
                     exception.message == "Login Failed",
                 ]
             ):
-                return LOGIN_FAILED
+                return LoginResult.FAILED
             if all(
                 [
                     exception.status_code == 403,
                     exception.message == "Too many failed attempts",
                 ]
             ):
-                return LOGIN_TOO_MANY_ATTEMPTS
+                return LoginResult.TOO_MANY_ATTEMPTS
             if all(
                 [
                     exception.status_code == 406,
@@ -134,17 +132,17 @@ class LevitonAPI:
                     == "Insufficient Data: Person uses two factor authentication. Requires code.",
                 ]
             ):
-                return LOGIN_CODE_REQUIRED
+                return LoginResult.CODE_REQUIRED
             if all(
                 [
                     exception.status_code == 408,
                     exception.message == "Error: Invalid code",
                 ]
             ):
-                return LOGIN_CODE_INVALID
-            return LOGIN_FAILED
+                return LoginResult.CODE_INVALID
+            return LoginResult.FAILED
         self.credentials = data
-        return LOGIN_SUCCESS
+        return LoginResult.SUCCESS
 
     def parse_response(self, response: requests.Response) -> dict[str, Any] | None:
         """Parse the response."""
@@ -159,8 +157,23 @@ class LevitonAPI:
         return text
 
     def refresh(self, function: Callable) -> requests.Response:
-        """Refresh login authorization."""
-        response = function()
+        """Refresh login authorization, retrying once on a stale connection.
+
+        Leviton's REST endpoint silently closes pooled keep-alive
+        connections; the next request on a stale connection fails with
+        ``ConnectionError``/``RemoteDisconnected`` and HA marks every
+        coordinator-bound entity unavailable until the next cycle. Retry
+        once after rotating the requests.Session so the client gets a
+        fresh socket.
+        """
+        try:
+            response = function()
+        except requests.exceptions.ConnectionError:
+            _LOGGER.debug(
+                "Leviton REST connection dropped; retrying with fresh session"
+            )
+            self.session = requests.Session()
+            response = function()
         if response.status_code != 200:
             text = json.loads(response.text)
             error = text["error"]
@@ -199,60 +212,96 @@ class LevitonAPI:
                 )
             file.close()
 
-    def update(self, target_residences: list[int] | None = None) -> list[Residence]:
+    def update(self, target_residences: list[int] | None = None) -> LevitonData:
         """Update."""
         try:
-            data = []
-            permissions = self.call(
-                method="get",
-                url=f"person/{self.user_id}/residentialpermissions",
-            )
-            if permissions and isinstance(permissions, list):
-                for permission in permissions:
-                    residential_account_id = permission["residentialAccountId"]
-                    residences = self.call(
-                        method="get",
-                        url=f"residentialaccounts/{residential_account_id}/residences",
-                    )
-                    if residences and isinstance(residences, list):
-                        for residence in residences:
-                            if residence and isinstance(residence, dict):
-                                residence_id = residence["id"]
-                                if any(
-                                    [
-                                        target_residences is None,
-                                        target_residences
-                                        and residence_id in target_residences,
-                                    ]
-                                ):
-                                    residence["activities"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/residentialactivities",
-                                    )
-                                    residence["devices"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/iotswitches",
-                                        headers={
-                                            "filter": json.dumps(
-                                                obj={"include": ["iotButtons"]}
-                                            )
-                                        },
-                                    )
-                                    residence["rooms"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/residentialrooms",
-                                        headers={
-                                            "filter": json.dumps(
-                                                obj={"include": ["residentialScenes"]}
-                                            )
-                                        },
-                                    )
-                                    residence["schedules"] = self.call(
-                                        method="get",
-                                        url=f"residences/{residence_id}/residentialschedules",
-                                    )
-                                    data.append(Residence(self, residence))
-            self.data = data
+            data = {}
+            data["residences"] = self.get_residences(target_residences)
+            data["firmware"] = self.get_firmware(data["residences"])
+            self.data = LevitonData(data)
         except LevitonException:
             return self.data
         return self.data
+
+    def get_residences(
+        self, target_residences: list[int] | None = None
+    ) -> list[Residence]:
+        """Get residences."""
+        data = []
+        permissions = self.call(
+            method=HTTPMethod.GET,
+            url=f"person/{self.user_id}/residentialpermissions",
+        )
+        if permissions and isinstance(permissions, list):
+            for permission in permissions:
+                residential_account_id = permission["residentialAccountId"]
+                residences = self.call(
+                    method=HTTPMethod.GET,
+                    url=f"residentialaccounts/{residential_account_id}/residences",
+                )
+                if residences and isinstance(residences, list):
+                    for residence in residences:
+                        if residence and isinstance(residence, dict):
+                            residence_id = residence["id"]
+                            if any(
+                                [
+                                    target_residences is None,
+                                    target_residences
+                                    and residence_id in target_residences,
+                                ]
+                            ):
+                                residence["activities"] = self.call(
+                                    method=HTTPMethod.GET,
+                                    url=f"residences/{residence_id}/residentialactivities",
+                                )
+                                residence["devices"] = self.call(
+                                    method=HTTPMethod.GET,
+                                    url=f"residences/{residence_id}/iotswitches",
+                                    headers={
+                                        "filter": json.dumps(
+                                            obj={"include": ["iotButtons"]}
+                                        )
+                                    },
+                                )
+                                residence["rooms"] = self.call(
+                                    method=HTTPMethod.GET,
+                                    url=f"residences/{residence_id}/residentialrooms",
+                                    headers={
+                                        "filter": json.dumps(
+                                            obj={"include": ["residentialScenes"]}
+                                        )
+                                    },
+                                )
+                                residence["schedules"] = self.call(
+                                    method=HTTPMethod.GET,
+                                    url=f"residences/{residence_id}/residentialschedules",
+                                )
+                                data.append(Residence(self, residence))
+        return data
+
+    def get_firmware(self, residences: list[Residence]) -> dict[str, Firmware]:
+        """Get firmware."""
+        devices: dict[str, FirmwareAppID] = {}
+        for residence in residences:
+            for device in residence.devices:
+                if device.model and device.model not in devices:
+                    devices[device.model] = FIRMWARE_APP_MAP[device.generation]
+
+        firmware: dict[str, Firmware] = {}
+        for model, app_id in devices.items():
+            app_firmware = self.call(
+                method=HTTPMethod.GET,
+                url="lcsapps/getfirmware",
+                params={
+                    "appId": app_id,
+                    "model": model,
+                    "data": json.dumps(
+                        {
+                            "condensed": False,
+                        }
+                    ).encode("ascii"),
+                },
+            )
+            if app_firmware and isinstance(app_firmware, list):
+                firmware[model] = Firmware(app_firmware[0])
+        return firmware

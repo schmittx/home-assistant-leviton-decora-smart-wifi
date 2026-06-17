@@ -11,10 +11,14 @@ CONFIGURATION_URL: str = "https://my.leviton.com/home"
 
 DATA_API: str = "api"
 DATA_COORDINATOR: str = "coordinator"
+DATA_WEBSOCKET: str = "websocket"
+
+CONF_LOGIN_RESPONSE: str = "login_response"
 
 DOMAIN: str = "leviton_decora_smart_wifi"
 
-RELEASE_URL: str = "https://decorasmartsupport.zendesk.com/hc/en-us/articles/4409216317339-Decora-Smart-Wi-Fi-2nd-Generation-Firmware-Release-Notes"
+EVENT_NOTIFICATION: str = f"{DOMAIN}_event"
+UPDATE_NOTIFICATION: str = f"{DOMAIN}_update"
 
 UNDO_UPDATE_LISTENER: str = "undo_update_listener"
 
@@ -28,10 +32,10 @@ DEVICE_INFO_MODEL_RESIDENCE: str = "Residence"
 class ScanInterval(IntEnum):
     """Scan interval."""
 
-    DEFAULT = 120
-    MAX = 600
-    MIN = 30
-    STEP = 30
+    DEFAULT = 10
+    MAX = 60
+    MIN = 1
+    STEP = 1
 
 
 class Timeout(IntEnum):

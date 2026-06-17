@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi update entities."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,8 +14,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LevitonEntity
-from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN, RELEASE_URL
+from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
@@ -40,7 +38,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonUpdateEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             entities.extend(
                 LevitonUpdateEntity(
@@ -79,10 +77,31 @@ class LevitonUpdateEntity(UpdateEntity, LevitonEntity):
         return None
 
     @property
+    def release_summary(self) -> str | None:
+        """Summary of the release notes or changelog.
+
+        This is not suitable for long changelogs, but merely suitable
+        for a short excerpt update description of max 255 characters.
+        """
+        if self.firmware is not None and self.latest_version == self.firmware.version:
+            return (
+                self.firmware.notes.replace("~", "-") if self.firmware.notes else None
+            )
+        return None
+
+    def release_notes(self) -> str | None:
+        """Return full release notes.
+
+        This is suitable for a long changelog that does not fit in the release_summary property.
+        The returned string can contain markdown.
+        """
+        return self.release_summary
+
+    @property
     def release_url(self) -> str | None:
         """URL to the full release notes of the latest version available."""
-        if self.device is not None and self.device.is_generation_two:
-            return RELEASE_URL
+        if self.firmware is not None:
+            return self.firmware.release_url
         return None
 
     @property

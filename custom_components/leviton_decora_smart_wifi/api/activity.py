@@ -1,6 +1,6 @@
 """Leviton API."""
 
-from __future__ import annotations
+from http import HTTPMethod
 
 
 class Activity:
@@ -40,7 +40,7 @@ class Activity:
     def execute(self) -> None:
         """Execute."""
         self.api.call(
-            method="post",
+            method=HTTPMethod.POST,
             url="residentialactivities/execute",
             params={"id": self.id},
         )

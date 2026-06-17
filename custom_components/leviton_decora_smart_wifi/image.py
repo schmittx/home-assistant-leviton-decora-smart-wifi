@@ -1,7 +1,5 @@
 """Support for Leviton Decora Smart Wi-Fi image entities."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,11 +10,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from . import LevitonEntity
+from . import LevitonDataUpdateCoordinator
 from .const import CONF_DEVICES, CONF_RESIDENCES, DATA_COORDINATOR, DOMAIN
+from .entity import LevitonEntity
 
 
 @dataclass(frozen=True)
@@ -49,7 +47,7 @@ async def async_setup_entry(
     coordinator = entry[DATA_COORDINATOR]
     entities: list[LevitonImageEntity] = []
 
-    for residence in coordinator.data:
+    for residence in coordinator.data.residences:
         if residence.id in conf_residences:
             for device in residence.devices:
                 if device.id in conf_devices:
@@ -81,7 +79,7 @@ class LevitonImageEntity(LevitonEntity, ImageEntity):
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator,
+        coordinator: LevitonDataUpdateCoordinator,
         residence_id: int,
         device_id: int,
         entity_description: LevitonImageEntityDescription,
