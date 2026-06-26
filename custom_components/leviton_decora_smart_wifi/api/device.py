@@ -217,6 +217,21 @@ class Device:
         return self.data.get("localIP")
 
     @property
+    def bridge_id(self) -> int | None:
+        """Bridge ID."""
+        return self.data.get("iotBridgeId")
+
+    @property
+    def bridge_serial(self) -> str | None:
+        """Bridge serial."""
+        return self.data.get("iotBridgeSerial")
+
+    @property
+    def has_bridge(self) -> bool:
+        """Has bridge."""
+        return bool(self.bridge_id or self.bridge_serial)
+
+    @property
     def created(self) -> str | None:
         """Created."""
         return self.data.get("created")
@@ -1045,6 +1060,11 @@ class Device:
         return bool(self.model == "D2MSD")
 
     @property
+    def is_auto_shutoff_capable(self) -> bool:
+        """Is auto shutoff capable."""
+        return not self.has_motion_sensor and not self.is_gfci
+
+    @property
     def is_elv_capable(self) -> bool:
         """Is ELV capable."""
         return bool(self.model == "D2ELV")
@@ -1063,3 +1083,8 @@ class Device:
                 self.model in ["D215S", "D2SCS", "D26HD", "D2MSD", "D2ELV"],
             ]
         )
+
+    @property
+    def is_status_led_behavior_capable(self) -> bool:
+        """Is status LED behavior capable."""
+        return not self.is_controller and not self.is_gfci

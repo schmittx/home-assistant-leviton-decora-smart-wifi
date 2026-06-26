@@ -26,14 +26,13 @@ triggers:
 *Note: Leviton's API only emits `btnPress` notifications for buttons that have at least one action configured in the MyLeviton mobile app. Bind each button you want to expose in Home Assistant to any placeholder action in the MyLeviton app, the button itself doesn't need to do anything meaningful for Home Assistant to receive the press.*
 
 ## Install
-1. Ensure Home Assistant is updated to version 2026.3.0 or newer.
+1. Ensure Home Assistant is updated to version 2026.6.0 or newer.
 2. Use HACS and add as a [custom repo](https://hacs.xyz/docs/faq/custom_repositories); or download and manually move to the `custom_components` folder.
 3. Once the integration is installed follow the standard process to setup via UI and search for `Leviton Decora Smart Wi-Fi`.
 4. Follow the prompts.
 
 ## Options
-- Residences and devices can be updated via integration options.
-- If `Advanced Mode` is enabled for the current profile, additional options are available (interval, timeout, and response logging).
+- Residences, devices, polling interval, polling timeout, and response logging can be configured via integration options.
 
 ## Supported Devices
 ### Controllers
@@ -50,6 +49,7 @@ triggers:
 - D26HD
 - D2ELV
 - D2MSD
+- DN6HD
 - DW1KD
 - DW3HL
 - DW6HD
@@ -66,8 +66,12 @@ triggers:
 - D215O
 - D215S
 - D2SCS
+- DN15S
 - DW15S
 
 ## Future Plans
 - Control of night settings start/end time
-- Support for D2GF2, DN15S, DN6HD, MLWSB
+
+## Notes
+- `DN15S` and `DN6HD` devices may report bridge linkage through diagnostic data such as `Bridge Serial`.
+- The required `MLWSB` bridge is not currently exposed by the My Leviton cloud device list as a standalone selectable device, so it is not added as its own Home Assistant device by this integration.

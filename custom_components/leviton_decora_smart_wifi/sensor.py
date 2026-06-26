@@ -34,6 +34,18 @@ class LevitonSensorEntityDescription(SensorEntityDescription):
 
 SENSOR_DESCRIPTIONS: list[LevitonSensorEntityDescription] = [
     LevitonSensorEntityDescription(
+        key="bridge_id",
+        name="Bridge ID",
+        icon="mdi:identifier",
+        is_supported=lambda device: device.has_bridge,
+    ),
+    LevitonSensorEntityDescription(
+        key="bridge_serial",
+        name="Bridge Serial",
+        icon="mdi:hubspot",
+        is_supported=lambda device: device.has_bridge,
+    ),
+    LevitonSensorEntityDescription(
         key="fault_status",
         name="Fault Status",
         device_class=SensorDeviceClass.ENUM,
