@@ -44,7 +44,8 @@ class LevitonException(Exception):
         self.name = name
         self.message = message
         _LOGGER.error(
-            "\n- LevitionException\n- Status: %s\n- Name: %s\n- Message: %s, self.status_code, self.name, self.message"
+            "\n- LevitionException\n- Status: %s\n- Name: %s\n- Message: %s", 
+            self.status_code, self.name, self.message,
         )
 
 
