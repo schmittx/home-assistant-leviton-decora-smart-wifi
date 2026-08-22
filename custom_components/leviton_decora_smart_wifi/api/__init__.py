@@ -15,6 +15,11 @@ from .residence import Residence
 
 _LOGGER = logging.getLogger(__name__)
 
+# (connect, read) seconds applied to every request. Without a timeout a hung
+# connection blocks the whole update cycle until the coordinator gives up,
+# marking every entity unavailable for a full scan interval.
+REQUEST_TIMEOUT = (5, 10)
+
 
 class LevitonData:
     """LevitonData."""
@@ -44,7 +49,10 @@ class LevitonException(Exception):
         self.name = name
         self.message = message
         _LOGGER.error(
-            "\n- LevitionException\n- Status: %s\n- Name: %s\n- Message: %s, self.status_code, self.name, self.message"
+            "\n- LevitonException\n- Status: %s\n- Name: %s\n- Message: %s",
+            self.status_code,
+            self.name,
+            self.message,
         )
 
 
@@ -56,13 +64,15 @@ class LevitonAPI:
         authorization: str | None = None,
         save_location: str | None = None,
         user_id: str | None = None,
+        credentials: dict | None = None,
     ) -> None:
         """Initialize."""
         self.authorization = authorization
         self.save_location = save_location
         self.user_id = user_id
 
-        self.credentials: dict = {}
+        self.credentials: dict = credentials or {}
+        self.is_logging_in: bool = False
         self.data: LevitonData = LevitonData()
         self.session = requests.Session()
         self.user_name: str | None = None
@@ -78,14 +88,25 @@ class LevitonAPI:
         """Call."""
         if headers is None:
             headers = {}
-        if self.authorization:
-            headers["authorization"] = self.authorization
         _LOGGER.debug("Calling API with method: %s and URL: %s", method, url)
-        response = self.refresh(
-            lambda: self.session.request(
-                method=method, url=f"{API_ENDPOINT}/{url}", headers=headers, **kwargs
+
+        # Bound every request so one slow endpoint cannot stall the batch.
+        kwargs.setdefault("timeout", REQUEST_TIMEOUT)
+
+        # Build the authorization header at send time. A retry that follows a
+        # re-login must use the new token, so it cannot be baked in up front.
+        def send_request() -> requests.Response:
+            request_headers = dict(headers)
+            if self.authorization:
+                request_headers["authorization"] = self.authorization
+            return self.session.request(
+                method=method,
+                url=f"{API_ENDPOINT}/{url}",
+                headers=request_headers,
+                **kwargs,
             )
-        )
+
+        response = self.refresh(send_request)
         response = self.parse_response(response=response)
         self.save_response(response=response, name=url)
         return response
@@ -144,16 +165,33 @@ class LevitonAPI:
         self.credentials = data
         return LoginResult.SUCCESS
 
+    def decode_body(self, response: requests.Response) -> Any:
+        """Decode a JSON body, returning None when the body is not JSON.
+
+        The API intermittently answers with an HTML error page or an empty
+        body. Calling json.loads on that raises JSONDecodeError, which
+        aborts the whole coordinator update and marks every entity
+        unavailable until the next poll.
+        """
+        try:
+            return json.loads(response.text)
+        except ValueError:
+            return None
+
     def parse_response(self, response: requests.Response) -> dict[str, Any] | None:
         """Parse the response."""
-        text = json.loads(response.text)
-        if response.status_code != 200:
-            error = text["error"]
+        text = self.decode_body(response)
+
+        if response.status_code != 200 or text is None:
+            error = text.get("error", {}) if isinstance(text, dict) else {}
             raise LevitonException(
-                status_code=error.get("statusCode"),
-                name=error.get("name"),
-                message=error.get("message"),
+                status_code=error.get("statusCode", response.status_code),
+                name=error.get("name", "InvalidResponse"),
+                message=error.get(
+                    "message", f"Non-JSON response: {response.text[:200]!r}"
+                ),
             )
+
         return text
 
     def refresh(self, function: Callable) -> requests.Response:
@@ -164,31 +202,63 @@ class LevitonAPI:
         ``ConnectionError``/``RemoteDisconnected`` and HA marks every
         coordinator-bound entity unavailable until the next cycle. Retry
         once after rotating the requests.Session so the client gets a
-        fresh socket.
+        fresh socket. The same retry covers read/connect timeouts, and a
+        non-JSON error body is retried once before being reported.
         """
         try:
             response = function()
-        except requests.exceptions.ConnectionError:
-            _LOGGER.debug(
-                "Leviton REST connection dropped; retrying with fresh session"
+        except requests.exceptions.ConnectionError, requests.exceptions.Timeout:
+            _LOGGER.warning(
+                "Leviton REST connection dropped or timed out; retrying with"
+                " fresh session"
             )
             self.session = requests.Session()
             response = function()
+
         if response.status_code != 200:
-            text = json.loads(response.text)
-            error = text["error"]
+            text = self.decode_body(response)
+
+            # A non-JSON error body is a transient cloud fault. Retry once
+            # here rather than failing the whole update cycle.
+            if text is None:
+                _LOGGER.warning(
+                    "Leviton returned a non-JSON body (status %s); retrying once",
+                    response.status_code,
+                )
+                response = function()
+                text = self.decode_body(response)
+
+            error = text.get("error", {}) if isinstance(text, dict) else {}
+
+            # Re-login on any 401. The API returns "Authorization Required"
+            # rather than "Invalid Access Token", so matching on the message
+            # text never fired and an expired token was reused indefinitely.
+            # is_logging_in stops recursion, since login() calls call().
             if all(
                 [
                     response.status_code == 401,
-                    error["message"] == "Invalid Access Token",
+                    not self.is_logging_in,
+                    self.credentials.get("email"),
+                    self.credentials.get("password"),
                 ]
             ):
-                self.login(
-                    email=self.credentials["email"],
-                    password=self.credentials["password"],
-                    code=self.credentials.get("code"),
+                _LOGGER.debug(
+                    "Leviton rejected the token (%s); re-authenticating",
+                    error.get("message"),
                 )
+                self.is_logging_in = True
+
+                try:
+                    self.login(
+                        email=self.credentials["email"],
+                        password=self.credentials["password"],
+                        code=self.credentials.get("code"),
+                    )
+                finally:
+                    self.is_logging_in = False
+
                 response = function()
+
         return response
 
     def save_response(

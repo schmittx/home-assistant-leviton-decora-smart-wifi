@@ -4,10 +4,15 @@ from asyncio import timeout
 from datetime import timedelta
 import logging
 
+import requests
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    CONF_CODE,
+    CONF_EMAIL,
     CONF_ID,
     CONF_NAME,
+    CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_TOKEN,
     Platform,
@@ -60,6 +65,11 @@ PLATFORMS = (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Consecutive failed polls tolerated before entities are marked unavailable.
+# Home Assistant blanks every entity as soon as one update fails, so without
+# this a single transient fault costs a full scan interval of downtime.
+MAX_TOLERATED_UPDATE_FAILURES = 2
 
 
 class LevitonDataUpdateCoordinator(DataUpdateCoordinator[LevitonData]):
@@ -153,7 +163,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         save_location=conf_save_location,
         user_id=data[CONF_ID],
         authorization=data[CONF_TOKEN],
+        # Without these, refresh() cannot re-authenticate when the stored
+        # token is rejected, and every entity stays unavailable forever.
+        credentials={
+            CONF_EMAIL: data.get(CONF_EMAIL),
+            CONF_PASSWORD: data.get(CONF_PASSWORD),
+            CONF_CODE: data.get(CONF_CODE),
+        },
     )
+
+    consecutive_failures = 0
 
     async def async_update_data() -> LevitonData:
         """Fetch data from API endpoint.
@@ -161,13 +180,43 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         This is the place to pre-process the data to lookup tables
         so entities can quickly look up their data.
         """
+        nonlocal consecutive_failures
+
         try:
             async with timeout(conf_timeout):
-                return await hass.async_add_executor_job(api.update, conf_residences)
-        except LevitonException as exception:
+                result = await hass.async_add_executor_job(api.update, conf_residences)
+        except (
+            LevitonException,
+            TimeoutError,
+            requests.exceptions.RequestException,
+        ) as exception:
+            consecutive_failures += 1
+
+            # Serve the last known data for a few cycles so a transient cloud
+            # fault does not take every entity unavailable for a whole poll.
+            if (
+                consecutive_failures <= MAX_TOLERATED_UPDATE_FAILURES
+                and coordinator.data is not None
+            ):
+                _LOGGER.warning(
+                    "Leviton update failed (%s of %s tolerated), serving last known data: %s",
+                    consecutive_failures,
+                    MAX_TOLERATED_UPDATE_FAILURES,
+                    exception,
+                )
+                return coordinator.data
+
+            if isinstance(exception, LevitonException):
+                raise UpdateFailed(
+                    f"Error communicating with API, Status: {exception.status_code}, Error Name: {exception.name}, Error Message: {exception.message}"
+                ) from exception
+
             raise UpdateFailed(
-                f"Error communicating with API, Status: {exception.status_code}, Error Name: {exception.name}, Error Message: {exception.message}"
+                f"Error communicating with API: {exception!r}"
             ) from exception
+
+        consecutive_failures = 0
+        return result
 
     coordinator = LevitonDataUpdateCoordinator(
         hass=hass,
@@ -203,6 +252,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     websocket = await _async_start_websocket(
         hass,
         config_entry,
+        api,
         coordinator,
         conf_residences,
         conf_devices,
@@ -218,6 +268,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 async def _async_start_websocket(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
+    api: LevitonAPI,
     coordinator: LevitonDataUpdateCoordinator,
     conf_residences: list[int],
     conf_devices: list[int],
@@ -239,6 +290,13 @@ async def _async_start_websocket(
 
     @callback
     def token_provider() -> dict | None:
+        # Prefer the login response from the running session. The copy stored
+        # in the config entry is never rewritten after a re-login, so it goes
+        # stale and the WebSocket keeps authenticating with a dead token.
+        live = api.login_response
+        if isinstance(live, dict) and live.get("id"):
+            return live
+
         # Re-read from config_entry on every reconnect so a re-auth via
         # the options flow propagates without an HA restart. Prefer the
         # full login response object captured at config-flow time — the
