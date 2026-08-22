@@ -26,7 +26,7 @@ triggers:
 *Note: Leviton's API only emits `btnPress` notifications for buttons that have at least one action configured in the MyLeviton mobile app. Bind each button you want to expose in Home Assistant to any placeholder action in the MyLeviton app, the button itself doesn't need to do anything meaningful for Home Assistant to receive the press.*
 
 ## Install
-1. Ensure Home Assistant is updated to version 2026.6.0 or newer.
+1. Ensure Home Assistant is updated to version 2026.8.0 or newer.
 2. Use HACS and add as a [custom repo](https://hacs.xyz/docs/faq/custom_repositories); or download and manually move to the `custom_components` folder.
 3. Once the integration is installed follow the standard process to setup via UI and search for `Leviton Decora Smart Wi-Fi`.
 4. Follow the prompts.
@@ -47,8 +47,10 @@ triggers:
 ### Lights
 - D23LP
 - D26HD
+- D2710
 - D2ELV
 - D2MSD
+- D36HD
 - DN6HD
 - DW1KD
 - DW3HL
@@ -66,6 +68,7 @@ triggers:
 - D215O
 - D215S
 - D2SCS
+- D315S
 - DN15S
 - DW15S
 

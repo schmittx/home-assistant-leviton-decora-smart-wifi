@@ -86,6 +86,7 @@ async def async_setup_entry(
             entities.extend(
                 LevitonSensorEntity(
                     coordinator=coordinator,
+                    config_entry=config_entry,
                     residence_id=residence.id,
                     entity_description=description,
                 )
@@ -98,6 +99,7 @@ async def async_setup_entry(
                     entities.extend(
                         LevitonSensorEntity(
                             coordinator=coordinator,
+                            config_entry=config_entry,
                             residence_id=residence.id,
                             device_id=device.id,
                             entity_description=description,

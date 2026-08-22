@@ -46,6 +46,7 @@ async def async_setup_entry(
                     entities.extend(
                         LevitonButtonEvent(
                             coordinator=coordinator,
+                            config_entry=config_entry,
                             residence_id=residence.id,
                             device_id=device.id,
                             button_id=button.id,

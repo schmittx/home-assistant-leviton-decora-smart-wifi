@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -29,9 +30,12 @@ from .util import generate_device_identifier
 class LevitonEntity(CoordinatorEntity[LevitonDataUpdateCoordinator]):
     """Representation of a Leviton entity."""
 
+    _attr_has_entity_name = True
+
     def __init__(
         self,
         coordinator: LevitonDataUpdateCoordinator,
+        config_entry: ConfigEntry,
         residence_id: int,
         activity_id: int | None = None,
         schedule_id: int | None = None,
@@ -43,6 +47,7 @@ class LevitonEntity(CoordinatorEntity[LevitonDataUpdateCoordinator]):
     ) -> None:
         """Initialize the device."""
         super().__init__(coordinator)
+        self.config_entry_id = config_entry.entry_id
         self.residence_id = residence_id
         self.activity_id = activity_id
         self.schedule_id = schedule_id
@@ -52,6 +57,7 @@ class LevitonEntity(CoordinatorEntity[LevitonDataUpdateCoordinator]):
         self.button_id = button_id
         if entity_description:
             self.entity_description = entity_description
+        self._attr_unique_id = self._generate_unique_id()
 
     @property
     def residence(self) -> LevitonResidence | None:
@@ -176,7 +182,11 @@ class LevitonEntity(CoordinatorEntity[LevitonDataUpdateCoordinator]):
                     serial_number=self.device.serial,
                     suggested_area=self.device.room_name,
                     sw_version=self.device.version,
-                    via_device=generate_device_identifier(self.residence.id),
+                    via_device_id=dr.async_get_device_id_by_identifier(
+                        self.hass,
+                        generate_device_identifier(self.residence.id),
+                        config_entry_id=self.config_entry_id,
+                    ),
                 )
             return dr.DeviceInfo(
                 configuration_url=CONFIGURATION_URL,
@@ -191,24 +201,22 @@ class LevitonEntity(CoordinatorEntity[LevitonDataUpdateCoordinator]):
     @property
     def name(self) -> str | None:
         """Return the name of the entity."""
-        name = self.residence.name if self.residence else None
-        if self.device:
-            name = self.device.name
         if self.activity:
-            return f"{name} {self.activity.name} Activity"
+            return f"{self.activity.name} Activity"
         if self.schedule:
-            return f"{name} {self.schedule.name} Schedule"
+            return f"{self.schedule.name} Schedule"
         if self.scene:
-            return f"{name} {self.scene.name} Scene"
+            return f"{self.scene.name} Scene"
         if self.button:
-            return f"{name} {self.button.text}"
-        if description := self.entity_description.name:
-            return f"{name} {description}"
-        return name
+            return f"{self.button.text}"
+        return (
+            self.entity_description.name
+            if self.entity_description and isinstance(self.entity_description.name, str)
+            else None
+        )
 
-    @property
-    def unique_id(self) -> str | int | None:
-        """Return a unique ID."""
+    def _generate_unique_id(self) -> str | int | None:
+        """Generate a unique ID."""
         unique_id = self.residence.id if self.residence else None
         if self.device:
             unique_id = self.device.mac

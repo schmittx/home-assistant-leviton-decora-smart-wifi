@@ -287,6 +287,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                 }
             ),
+            last_step=True,
         )
 
     @staticmethod
@@ -462,4 +463,5 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                 }
             ),
+            last_step=True,
         )

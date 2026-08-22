@@ -54,6 +54,7 @@ async def async_setup_entry(
                     entities.extend(
                         LevitonImageEntity(
                             coordinator=coordinator,
+                            config_entry=config_entry,
                             residence_id=residence.id,
                             device_id=device.id,
                             entity_description=description,
@@ -80,6 +81,7 @@ class LevitonImageEntity(LevitonEntity, ImageEntity):
     def __init__(
         self,
         coordinator: LevitonDataUpdateCoordinator,
+        config_entry: ConfigEntry,
         residence_id: int,
         device_id: int,
         entity_description: LevitonImageEntityDescription,
@@ -88,6 +90,7 @@ class LevitonImageEntity(LevitonEntity, ImageEntity):
         """Initialize device."""
         super().__init__(
             coordinator=coordinator,
+            config_entry=config_entry,
             residence_id=residence_id,
             device_id=device_id,
             entity_description=entity_description,

@@ -38,6 +38,7 @@ async def async_setup_entry(
             entities.extend(
                 LevitonFanEntity(
                     coordinator=coordinator,
+                    config_entry=config_entry,
                     residence_id=residence.id,
                     device_id=device.id,
                     entity_description=LevitonFanEntityDescription(

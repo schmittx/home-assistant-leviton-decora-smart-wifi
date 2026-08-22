@@ -22,7 +22,7 @@ from .const import (
     STATUS_LED_MODE_MAP,
     SUPPORTED_DEVICES_CONTROLLER,
     SUPPORTED_DEVICES_FAN,
-    SUPPORTED_DEVICES_GENERATION_TWO,
+    SUPPORTED_DEVICES_GENERATION_MAP,
     SUPPORTED_DEVICES_GFCI,
     SUPPORTED_DEVICES_LIGHT,
     SUPPORTED_DEVICES_MODEL,
@@ -991,7 +991,7 @@ class Device:
         buttons = [
             Button(self.api, self, button) for button in self.data.get("iotButtons", [])
         ]
-        if self.generation == DeviceGeneration.TWO:
+        if self.generation in [DeviceGeneration.TWO, DeviceGeneration.THREE]:
             return [button for button in buttons if button.number != 4]
         return buttons
 
@@ -1031,13 +1031,9 @@ class Device:
         return bool(self.model in SUPPORTED_DEVICES_SWITCH)
 
     @property
-    def generation(self) -> DeviceGeneration:
+    def generation(self) -> DeviceGeneration | None:
         """Generation."""
-        return (
-            DeviceGeneration.TWO
-            if self.model in SUPPORTED_DEVICES_GENERATION_TWO
-            else DeviceGeneration.ONE
-        )
+        return SUPPORTED_DEVICES_GENERATION_MAP.get(self.model)
 
     @property
     def has_led_bar(self) -> bool:
@@ -1080,7 +1076,17 @@ class Device:
         return all(
             [
                 self.version and version_tuple(self.version) >= version_tuple("1.6.9"),
-                self.model in ["D215S", "D2SCS", "D26HD", "D2MSD", "D2ELV"],
+                self.model
+                in [
+                    "D215S",
+                    "D2SCS",
+                    "D26HD",
+                    "D2710",
+                    "D2MSD",
+                    "D2ELV",
+                    "D315S",
+                    "D36HD",
+                ],
             ]
         )
 

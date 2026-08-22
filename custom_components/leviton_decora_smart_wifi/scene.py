@@ -35,6 +35,7 @@ async def async_setup_entry(
                 entities.extend(
                     LevitonSceneEntity(
                         coordinator=coordinator,
+                        config_entry=config_entry,
                         residence_id=residence.id,
                         room_id=room.id,
                         scene_id=scene.id,

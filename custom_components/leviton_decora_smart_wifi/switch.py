@@ -94,6 +94,7 @@ async def async_setup_entry(
             entities.extend(
                 LevitonSwitchEntity(
                     coordinator=coordinator,
+                    config_entry=config_entry,
                     residence_id=residence.id,
                     entity_description=description,
                 )
@@ -103,6 +104,7 @@ async def async_setup_entry(
             entities.extend(
                 LevitonSwitchEntity(
                     coordinator=coordinator,
+                    config_entry=config_entry,
                     residence_id=residence.id,
                     schedule_id=schedule.id,
                     entity_description=LevitonSwitchEntityDescription(
@@ -124,6 +126,7 @@ async def async_setup_entry(
                         entities.append(
                             LevitonSwitchEntity(
                                 coordinator=coordinator,
+                                config_entry=config_entry,
                                 residence_id=residence.id,
                                 device_id=device.id,
                                 entity_description=LevitonSwitchEntityDescription(
@@ -136,6 +139,7 @@ async def async_setup_entry(
                     entities.extend(
                         LevitonSwitchEntity(
                             coordinator=coordinator,
+                            config_entry=config_entry,
                             residence_id=residence.id,
                             device_id=device.id,
                             entity_description=description,

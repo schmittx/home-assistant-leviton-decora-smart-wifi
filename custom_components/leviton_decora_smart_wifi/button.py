@@ -60,6 +60,7 @@ async def async_setup_entry(
             entities.extend(
                 LevitonButtonEntity(
                     coordinator=coordinator,
+                    config_entry=config_entry,
                     residence_id=residence.id,
                     activity_id=activity.id,
                     entity_description=LevitonButtonEntityDescription(
@@ -74,6 +75,7 @@ async def async_setup_entry(
                     entities.extend(
                         LevitonButtonEntity(
                             coordinator=coordinator,
+                            config_entry=config_entry,
                             residence_id=residence.id,
                             device_id=device.id,
                             button_id=button.id,
@@ -88,6 +90,7 @@ async def async_setup_entry(
                     entities.extend(
                         LevitonButtonEntity(
                             coordinator=coordinator,
+                            config_entry=config_entry,
                             residence_id=residence.id,
                             device_id=device.id,
                             entity_description=description,
