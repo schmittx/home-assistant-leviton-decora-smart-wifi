@@ -217,17 +217,17 @@ class LevitonEntity(CoordinatorEntity[LevitonDataUpdateCoordinator]):
 
     def _generate_unique_id(self) -> str | int | None:
         """Generate a unique ID."""
-        unique_id = self.residence.id if self.residence else None
+        unique_id = self.residence_id
         if self.device:
-            unique_id = self.device.mac
-        if self.activity:
-            return f"{unique_id}-{self.activity.id}"
-        if self.schedule:
-            return f"{unique_id}-{self.schedule.id}"
-        if self.scene and self.room:
-            return f"{unique_id}-{self.room.id}-{self.scene.id}"
-        if self.button:
-            return f"{unique_id}-{self.button.id}"
+            unique_id = self.device.mac or f"{self.residence_id}-{self.device_id}"
+        if self.activity_id:
+            return f"{unique_id}-{self.activity_id}"
+        if self.schedule_id:
+            return f"{unique_id}-{self.schedule_id}"
+        if self.room_id and self.scene_id:
+            return f"{unique_id}-{self.room_id}-{self.scene_id}"
+        if self.button_id:
+            return f"{unique_id}-{self.button_id}"
         if key := self.entity_description.key:
             return f"{unique_id}-{key}"
         return unique_id
