@@ -4,7 +4,7 @@ import logging
 from types import MappingProxyType
 from typing import Any
 
-import voluptuous as vol
+import probatio
 
 from homeassistant import config_entries
 from homeassistant.const import (
@@ -109,14 +109,14 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_EMAIL): TextSelector(
+                    probatio.Required(CONF_EMAIL): TextSelector(
                         TextSelectorConfig(
                             type=TextSelectorType.EMAIL,
                         )
                     ),
-                    vol.Required(CONF_PASSWORD): TextSelector(
+                    probatio.Required(CONF_PASSWORD): TextSelector(
                         TextSelectorConfig(
                             type=TextSelectorType.PASSWORD,
                         )
@@ -148,9 +148,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="authenticate",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_CODE): TextSelector(
+                    probatio.Required(CONF_CODE): TextSelector(
                         TextSelectorConfig(
                             type=TextSelectorType.TEXT,
                         )
@@ -183,9 +183,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="residences",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_RESIDENCES, default=residence_names
                     ): SelectSelector(
                         SelectSelectorConfig(
@@ -234,9 +234,11 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="devices",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Optional(CONF_DEVICES, default=device_names): SelectSelector(
+                    probatio.Optional(
+                        CONF_DEVICES, default=device_names
+                    ): SelectSelector(
                         SelectSelectorConfig(
                             options=device_names,
                             multiple=True,
@@ -262,12 +264,12 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="advanced",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_SAVE_RESPONSES, default=DEFAULT_SAVE_RESPONSES
                     ): BooleanSelector(),
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_SCAN_INTERVAL, default=ScanInterval.DEFAULT
                     ): NumberSelector(
                         NumberSelectorConfig(
@@ -277,7 +279,9 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             unit_of_measurement=UnitOfTime.MINUTES,
                         )
                     ),
-                    vol.Optional(CONF_TIMEOUT, default=Timeout.DEFAULT): NumberSelector(
+                    probatio.Optional(
+                        CONF_TIMEOUT, default=Timeout.DEFAULT
+                    ): NumberSelector(
                         NumberSelectorConfig(
                             min=Timeout.MIN,
                             max=Timeout.MAX,
@@ -350,9 +354,9 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="residences",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_RESIDENCES, default=conf_residences
                     ): SelectSelector(
                         SelectSelectorConfig(
@@ -402,9 +406,11 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="devices",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Optional(CONF_DEVICES, default=conf_devices): SelectSelector(
+                    probatio.Optional(
+                        CONF_DEVICES, default=conf_devices
+                    ): SelectSelector(
                         SelectSelectorConfig(
                             options=device_names,
                             multiple=True,
@@ -438,12 +444,12 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="advanced",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_SAVE_RESPONSES, default=conf_save_responses
                     ): BooleanSelector(),
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_SCAN_INTERVAL, default=conf_scan_interval
                     ): NumberSelector(
                         NumberSelectorConfig(
@@ -453,7 +459,9 @@ class LevitonOptionsFlowHandler(config_entries.OptionsFlow):
                             unit_of_measurement=UnitOfTime.MINUTES,
                         )
                     ),
-                    vol.Optional(CONF_TIMEOUT, default=conf_timeout): NumberSelector(
+                    probatio.Optional(
+                        CONF_TIMEOUT, default=conf_timeout
+                    ): NumberSelector(
                         NumberSelectorConfig(
                             min=Timeout.MIN,
                             max=Timeout.MAX,
