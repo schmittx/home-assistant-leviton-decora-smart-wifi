@@ -18,12 +18,13 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import LevitonAPI, LevitonData, LevitonException
+from .api import LevitonAPI, LevitonAuthError, LevitonData, LevitonException
 from .api.websocket import LevitonWebSocket
 from .config_flow import LevitonConfigFlow
 from .const import (
@@ -185,6 +186,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         try:
             async with timeout(conf_timeout):
                 result = await hass.async_add_executor_job(api.update, conf_residences)
+        except LevitonAuthError as exception:
+            # Stop polling and prompt the user to reauthenticate rather than
+            # retrying a login that cannot succeed (e.g. a used 2FA code).
+            raise ConfigEntryAuthFailed(exception.message) from exception
         except (
             LevitonException,
             TimeoutError,
@@ -226,7 +231,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         update_interval=timedelta(minutes=conf_scan_interval),
         update_method=async_update_data,
     )
-    await coordinator.async_refresh()
+    await coordinator.async_config_entry_first_refresh()
 
     for residence in coordinator.data.residences:
         if residence.id and residence.id in conf_residences:

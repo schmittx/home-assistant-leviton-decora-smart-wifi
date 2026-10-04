@@ -1,7 +1,9 @@
 {
     "config": {
         "abort": {
-            "already_configured": "The desired account is already configured"
+            "already_configured": "The desired account is already configured",
+            "reauth_successful": "Reauthentication was successful",
+            "wrong_account": "The login belongs to a different My Leviton account than this entry"
         },
         "error": {
             "login_code_invalid": "Invalid code",
@@ -26,6 +28,13 @@
                 },
                 "description": "Enter the code that was sent to {email}.",
                 "title": "Two factor authentication required"
+            },
+            "reauth_confirm": {
+                "data": {
+                    "password": "Password"
+                },
+                "description": "The My Leviton login for {email} has expired. Enter your password to log in again. If two factor authentication is enabled, a new code will be sent.",
+                "title": "Reauthenticate My Leviton account"
             },
             "residences": {
                 "data": {

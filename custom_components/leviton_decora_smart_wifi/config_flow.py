@@ -1,6 +1,7 @@
 """Adds config flow for Leviton Decora Smart Wi-Fi integration."""
 
 import logging
+from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any
 
@@ -69,6 +70,23 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_finish_login(self, errors):
         """Async finish login."""
         await self.async_set_unique_id(self.api.user_id)
+
+        if self.source == config_entries.SOURCE_REAUTH:
+            self._abort_if_unique_id_mismatch(reason="wrong_account")
+            reauth_entry = self._get_reauth_entry()
+            data = {
+                **reauth_entry.data,
+                CONF_TOKEN: self.api.authorization,
+                CONF_PASSWORD: self.user_input[CONF_PASSWORD],
+            }
+            if self.api.login_response is not None:
+                data[CONF_LOGIN_RESPONSE] = self.api.login_response
+            if code := self.user_input.get(CONF_CODE):
+                data[CONF_CODE] = code
+            else:
+                data.pop(CONF_CODE, None)
+            return self.async_update_reload_and_abort(reauth_entry, data=data)
+
         self._abort_if_unique_id_configured()
 
         try:
@@ -105,7 +123,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if result == LevitonLoginResult.SUCCESS:
                 _LOGGER.debug("Login successful")
                 return await self.async_finish_login(errors)
-            errors["base"] = result
+            errors["base"] = f"login_{result}"
 
         return self.async_show_form(
             step_id="user",
@@ -144,7 +162,7 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if result == LevitonLoginResult.SUCCESS:
                 _LOGGER.debug("Login successful")
                 return await self.async_finish_login(errors)
-            errors["base"] = result
+            errors["base"] = f"login_{result}"
 
         return self.async_show_form(
             step_id="authenticate",
@@ -153,6 +171,49 @@ class LevitonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     probatio.Required(CONF_CODE): TextSelector(
                         TextSelectorConfig(
                             type=TextSelectorType.TEXT,
+                        )
+                    ),
+                }
+            ),
+            description_placeholders={"email": self.user_input[CONF_EMAIL]},
+            errors=errors,
+        )
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]):
+        """Start reauthentication after the stored login is rejected."""
+        self.user_input[CONF_EMAIL] = entry_data[CONF_EMAIL]
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        """Async step reauth confirm."""
+        errors = {}
+
+        if user_input is not None:
+            self.user_input[CONF_PASSWORD] = user_input[CONF_PASSWORD]
+            self.user_input.pop(CONF_CODE, None)
+            self.api = LevitonAPI()
+
+            result = await self.hass.async_add_executor_job(
+                self.api.login,
+                self.user_input[CONF_EMAIL],
+                self.user_input[CONF_PASSWORD],
+            )
+
+            if result == LevitonLoginResult.CODE_REQUIRED:
+                _LOGGER.debug("Two factor authentication is required for the account")
+                return await self.async_step_authenticate()
+            if result == LevitonLoginResult.SUCCESS:
+                _LOGGER.debug("Login successful")
+                return await self.async_finish_login(errors)
+            errors["base"] = f"login_{result}"
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=probatio.Schema(
+                {
+                    probatio.Required(CONF_PASSWORD): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.PASSWORD,
                         )
                     ),
                 }

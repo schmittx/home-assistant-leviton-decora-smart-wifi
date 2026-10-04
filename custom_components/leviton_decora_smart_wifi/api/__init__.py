@@ -56,6 +56,28 @@ class LevitonException(Exception):
         )
 
 
+class LevitonAuthError(LevitonException):
+    """Raised when the token is rejected and re-login is not possible.
+
+    With two factor authentication the stored code is single use, so the
+    re-login that follows an expired token always fails. Retrying it only
+    counts toward the "too many failed attempts" lockout.
+    """
+
+    def __init__(self, result: LoginResult | None = None) -> None:
+        """Initialize."""
+        self.result = result
+        super().__init__(
+            status_code=401,
+            name="AuthenticationFailed",
+            message=(
+                f"Re-login failed: {result}"
+                if result
+                else "Token rejected and no credentials stored"
+            ),
+        )
+
+
 class LevitonAPI:
     """LevitonAPI."""
 
@@ -113,6 +135,16 @@ class LevitonAPI:
 
     def login(self, email: str, password: str, code: str | None = None) -> LoginResult:
         """Login."""
+        # A rejected login is a 401 itself; is_logging_in stops refresh()
+        # from treating it as an expired token.
+        self.is_logging_in = True
+        try:
+            return self._login(email, password, code)
+        finally:
+            self.is_logging_in = False
+
+    def _login(self, email: str, password: str, code: str | None) -> LoginResult:
+        """Send the login request and classify the result."""
         try:
             data = {"email": email, "password": password}
             if code:
@@ -234,28 +266,29 @@ class LevitonAPI:
             # rather than "Invalid Access Token", so matching on the message
             # text never fired and an expired token was reused indefinitely.
             # is_logging_in stops recursion, since login() calls call().
-            if all(
-                [
-                    response.status_code == 401,
-                    not self.is_logging_in,
-                    self.credentials.get("email"),
-                    self.credentials.get("password"),
-                ]
-            ):
+            if response.status_code == 401 and not self.is_logging_in:
+                if not all(
+                    [
+                        self.credentials.get("email"),
+                        self.credentials.get("password"),
+                    ]
+                ):
+                    raise LevitonAuthError
+
                 _LOGGER.debug(
                     "Leviton rejected the token (%s); re-authenticating",
                     error.get("message"),
                 )
-                self.is_logging_in = True
+                result = self.login(
+                    email=self.credentials["email"],
+                    password=self.credentials["password"],
+                    code=self.credentials.get("code"),
+                )
 
-                try:
-                    self.login(
-                        email=self.credentials["email"],
-                        password=self.credentials["password"],
-                        code=self.credentials.get("code"),
-                    )
-                finally:
-                    self.is_logging_in = False
+                # Replaying the request with the rejected token cannot succeed,
+                # and the caller would keep retrying the failed login each poll.
+                if result != LoginResult.SUCCESS:
+                    raise LevitonAuthError(result)
 
                 response = function()
 
@@ -289,6 +322,9 @@ class LevitonAPI:
             data["residences"] = self.get_residences(target_residences)
             data["firmware"] = self.get_firmware(data["residences"])
             self.data = LevitonData(data)
+        except LevitonAuthError:
+            # Returning stale data here would hide the failure indefinitely.
+            raise
         except LevitonException:
             return self.data
         return self.data
